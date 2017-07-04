@@ -13,17 +13,20 @@ def cast_string_to_float(s):
     except ValueError:
         return None
 
+
 def cast_string_to_int(s):
     try:
         return int(s)
     except ValueError:
         return None
 
+
 def cast_string_to_bool(s):
     try:
         return bool(s)
     except ValueError:
         return None
+
 
 def cast_string_to_tuple(s):
     try:
@@ -56,7 +59,7 @@ class HomeCamManager:
 
         self._hc_config = HomeCamConfig(recording_cam_id=0,
                                         recording_fps=20.0,
-                                        recording_resolution=(640,480),
+                                        recording_resolution=(640, 480),
                                         recording_file_limit=10,
                                         recording_time_limit=60,
                                         detection_scale_factor=1.1,

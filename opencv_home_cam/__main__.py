@@ -26,14 +26,14 @@ def load_options():
                                      description=description)
 
     parser.add_argument('-a', '--cascade-file', nargs='+', type=str,
-                             help="Cascade file(s) for OpenCV.")
+                        help="Cascade file(s) for OpenCV.")
     parser.add_argument('-c', '--config-file',
-                             help="Configuraton file.")
+                        help="Configuraton file.")
     parser.add_argument('-l', '--log-config-file',
-                             help="Logging configuraton file. This is the "
-                                  "configuration for the Python logging "
-                                  "facility. See the Python documentation "
-                                  "for more details.")
+                        help="Logging configuraton file. This is the "
+                             "configuration for the Python logging "
+                             "facility. See the Python documentation "
+                             "for more details.")
 
     parsed_args = parser.parse_args()
 

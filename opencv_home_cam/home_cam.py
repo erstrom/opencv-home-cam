@@ -11,7 +11,7 @@ except NameError:
     str = str
     unicode = str
     bytes = bytes
-    basestring = (str,bytes)
+    basestring = (str, bytes)
 else:
     # 'unicode' exists, must be Python 2
     str = str
@@ -95,7 +95,7 @@ class HomeCam:
         regex = re.compile(base + '(\d+)')
 
         self._logger.info("Video files dir: %s. File base: %s",
-                     directory, base)
+                          directory, base)
 
         lowest_idx = 0x7fffffff
         highest_idx = 0
@@ -127,7 +127,7 @@ class HomeCam:
             self._cur_outfile_lowest_index = lowest_idx
 
         self._logger.info("Cur indices: highest = %d, lowest = %d",
-                     self._cur_outfile_index, self._cur_outfile_lowest_index)
+                          self._cur_outfile_index, self._cur_outfile_lowest_index)
 
     def _open_new_video_file(self):
 
