@@ -36,6 +36,7 @@ class HomeCamManager:
 
     def __init__(self, config_file, cascade_files):
 
+        self._logger = logging.getLogger(__name__)
         self._set_default_config()
 
         self._cp = configparser.ConfigParser()
@@ -72,42 +73,42 @@ class HomeCamManager:
         if 'fps' in rec_cfg:
             self._hc_config = self._hc_config._replace(recording_fps=cast_string_to_float(rec_cfg['fps']))
             if self._hc_config.recording_fps is None:
-                logging.error("Config: bad fps value!")
+                self._logger.error("Config: bad fps value!")
 
         if 'resolution' in rec_cfg:
             self._hc_config = self._hc_config._replace(recording_resolution=cast_string_to_tuple(rec_cfg['resolution']))
             if self._hc_config.recording_resolution is None:
-                logging.error("Config: bad resolution value!")
+                self._logger.error("Config: bad resolution value!")
 
         if 'file_limit' in rec_cfg:
             self._hc_config = self._hc_config._replace(recording_file_limit=cast_string_to_int(rec_cfg['file_limit']))
             if self._hc_config.recording_file_limit is None:
-                logging.error("Config: bad file_limit value!")
+                self._logger.error("Config: bad file_limit value!")
 
         if 'time_limit' in rec_cfg:
             self._hc_config = self._hc_config._replace(recording_time_limit=cast_string_to_int(rec_cfg['time_limit']))
             if self._hc_config.recording_time_limit is None:
-                logging.error("Config: bad time_limit value!")
+                self._logger.error("Config: bad time_limit value!")
 
         if 'cam_id' in rec_cfg:
             self._hc_config = self._hc_config._replace(recording_cam_id=cast_string_to_int(rec_cfg['cam_id']))
             if self._hc_config.recording_cam_id is None:
-                logging.error("Config: bad cam_id value!")
+                self._logger.error("Config: bad cam_id value!")
 
         if 'enable' in rec_cfg:
             self._hc_config = self._hc_config._replace(recording_enable=cast_string_to_bool(rec_cfg['enable']))
             if self._hc_config.recording_enable is None:
-                logging.error("Config: Bad output enable option!")
+                self._logger.error("Config: Bad output enable option!")
 
         if 'recording_dir' in rec_cfg:
             self._hc_config = self._hc_config._replace(recording_dir=rec_cfg['recording_dir'])
             if self._hc_config.recording_dir is None:
-                logging.error("Config: Bad output directory path!")
+                self._logger.error("Config: Bad output directory path!")
 
         if 'recording_file_base' in rec_cfg:
             self._hc_config = self._hc_config._replace(recording_file_base=rec_cfg['recording_file_base'])
             if self._hc_config.recording_file_base is None:
-                logging.error("Config: Bad output file base!")
+                self._logger.error("Config: Bad output file base!")
 
     def _read_detection_config(self):
 
@@ -116,17 +117,17 @@ class HomeCamManager:
         if 'scale_factor' in detection_cfg:
             self._hc_config = self._hc_config._replace(detection_scale_factor=cast_string_to_float(detection_cfg['scale_factor']))
             if self._hc_config.detection_scale_factor is None:
-                logging.error("Config: bad scale_factor value!")
+                self._logger.error("Config: bad scale_factor value!")
 
         if 'min_neighbours' in detection_cfg:
             self._hc_config = self._hc_config._replace(detection_min_neighbours=cast_string_to_int(detection_cfg['min_neighbours']))
             if self._hc_config.detection_min_neighbours is None:
-                logging.error("Config: bad min_neighbours value!")
+                self._logger.error("Config: bad min_neighbours value!")
 
         if 'size' in detection_cfg:
             self._hc_config = self._hc_config._replace(detection_size=cast_string_to_int(detection_cfg['size']))
             if self._hc_config.detection_size is None:
-                logging.error("Config: bad size value!")
+                self._logger.error("Config: bad size value!")
 
     def start(self):
 
@@ -152,12 +153,12 @@ class HomeCamManager:
 
             if objects is not None:
                 if not object_detected:
-                    logging.info("Object(s) detected")
+                    self._logger.info("Object(s) detected")
                     self._hc.enable_frame_saving()
                 object_detected = True
             else:
                 if object_detected:
-                    logging.info("No object(s) detected")
+                    self._logger.info("No object(s) detected")
                     self._hc.disable_frame_saving()
                 object_detected = False
 

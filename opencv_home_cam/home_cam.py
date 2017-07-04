@@ -44,6 +44,7 @@ class HomeCam:
 
     def __init__(self, cascade_files, config):
 
+        self._logger = logging.getLogger(__name__)
         if cascade_files is None:
             raise HomeCamException("Missing cascade file(s)")
 
@@ -93,7 +94,7 @@ class HomeCam:
         ext = self._recording_ext
         regex = re.compile(base + '(\d+)')
 
-        logging.info("Video files dir: %s. File base: %s",
+        self._logger.info("Video files dir: %s. File base: %s",
                      directory, base)
 
         lowest_idx = 0x7fffffff
@@ -118,14 +119,14 @@ class HomeCam:
         self._nbr_of_outfiles = nbr_of_files
         if nbr_of_files == 0:
             # There are no logfiles stored in the log file directory
-            logging.info("Videofile dir empty.")
+            self._logger.info("Videofile dir empty.")
             self._cur_outfile_index = 0
             self._cur_outfile_lowest_index = 0
         else:
             self._cur_outfile_index = highest_idx + 1
             self._cur_outfile_lowest_index = lowest_idx
 
-        logging.info("Cur indices: highest = %d, lowest = %d",
+        self._logger.info("Cur indices: highest = %d, lowest = %d",
                      self._cur_outfile_index, self._cur_outfile_lowest_index)
 
     def _open_new_video_file(self):
@@ -135,9 +136,9 @@ class HomeCam:
         ext = self._recording_ext
 
         new_file_name = directory + '/' + base + str(self._cur_outfile_index) + ext
-        logging.info("Opening new output file: %s", new_file_name)
+        self._logger.info("Opening new output file: %s", new_file_name)
         fourcc = cv2.VideoWriter_fourcc(*'mjpa')
-        logging.info("recording resoluton: {}".format(self._recording_resolution))
+        self._logger.info("recording resoluton: {}".format(self._recording_resolution))
         self._outfile = cv2.VideoWriter(new_file_name, fourcc,
                                         self._recording_fps,
                                         self._recording_resolution)
@@ -151,7 +152,7 @@ class HomeCam:
         ext = self._recording_ext
 
         oldest_filename = directory + '/' + base + str(self._cur_outfile_lowest_index) + ext
-        logging.info("Removing old output file: %s", oldest_filename)
+        self._logger.info("Removing old output file: %s", oldest_filename)
         os.remove(oldest_filename)
         # Update oldest and current index by rescanning all outfiles
         self._scan_video_files()
@@ -159,7 +160,7 @@ class HomeCam:
     def _do_save_frame(self, frame):
 
         if self._cur_nbr_of_recorded_frames > self._recording_frame_limit:
-            logging.info("Switching output file")
+            self._logger.info("Switching output file")
             self._outfile.release()
             self._cur_outfile_index += 1
             self._open_new_video_file()
@@ -204,20 +205,20 @@ class HomeCam:
 
     def enable_frame_saving(self):
 
-        logging.info("Frame saving enabled")
+        self._logger.info("Frame saving enabled")
         self._save_frame = True
 
     def disable_frame_saving(self):
 
-        logging.info("Frame saving disabled")
+        self._logger.info("Frame saving disabled")
         self._save_frame = False
 
     def close(self):
 
         if self._video_capture is not None:
-            logging.info("Closing video capture device")
+            self._logger.info("Closing video capture device")
             self._video_capture.release()
 
         if self._outfile is not None:
-            logging.info("Closing video output file")
+            self._logger.info("Closing video output file")
             self._outfile.release()
