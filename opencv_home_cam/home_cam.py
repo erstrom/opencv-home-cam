@@ -35,6 +35,20 @@ HomeCamConfig = namedtuple('HomeCamConfig',
                            verbose=False)
 
 
+# frame          - The current frame (image)
+# cascade_status - A dict of detection status (boolean) for all cascades.
+#                  The current cascade file is the dict key.
+#                  True => The cascade has detected an object, False => No detection.
+# rectangles     - A dict of (x, y, width, height) tuples forming a rectangle
+#                  of each match in the current frame. The current cascade
+#                  file is the dict key.
+HomeCamDetectionData = namedtuple('HomeCamDetectionData',
+                                  ['frame',
+                                   'cascade_status',
+                                   'rectangles'],
+                                  verbose=False)
+
+
 class HomeCamException(Exception):
 
     pass
@@ -58,13 +72,13 @@ class HomeCam:
             cur_cascade = cv2.CascadeClassifier(cascade_files)
             if cur_cascade is None:
                 raise HomeCamException("Bad cascade file")
-            self._cascades.append(cur_cascade)
+            self._cascades.append((cascade_files, cur_cascade))
         elif isinstance(cascade_files, (list, tuple)):
             for cascade_file in cascade_files:
                 cur_cascade = cv2.CascadeClassifier(cascade_file)
                 if cur_cascade is None:
                     raise HomeCamException("Bad cascade file")
-                self._cascades.append(cur_cascade)
+                self._cascades.append((cascade_file, cur_cascade))
 
         self._video_capture = cv2.VideoCapture(int(config.recording_cam_id))
         if self._video_capture is None:
@@ -172,8 +186,8 @@ class HomeCam:
             self._remove_old_video_file()
 
     # Read one frame from the cam and process it.
-    # Return an array of (x, y, w, h) tuples (rectangles) for all matches
-    # in the current image.
+    # Returns a HomeCamDetectionData named tuple containing all detection
+    # data.
     # If non of the  cascades detects an object, None will be returned.
     def read_and_process_frame(self):
 
@@ -184,8 +198,14 @@ class HomeCam:
 
         frame_gs = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-        objs = []
-        for cascade in self._cascades:
+        cascade_status = {}
+        rectangles = {}
+        object_detected = False
+
+        for (cascade_file, cascade) in self._cascades:
+            cascade_status[cascade_file] = False
+            rectangles[cascade_file] = None
+
             obj = cascade.detectMultiScale(frame_gs,
                                            scaleFactor=self._scale_factor,
                                            minNeighbors=self._min_neighbours,
@@ -193,15 +213,21 @@ class HomeCam:
             if len(obj) == 0:
                 continue
 
-            objs.append(obj)
+            object_detected = True
+            cascade_status[cascade_file] = True
+            rectangles[cascade_file] = obj
 
         if self._save_frame and self._outfile is not None:
             self._do_save_frame(frame)
 
-        if len(objs) == 0:
-            return None
+        if object_detected:
+            detection_data = HomeCamDetectionData(frame=frame_gs,
+                                                  cascade_status=cascade_status,
+                                                  rectangles=rectangles)
         else:
-            return objs
+            detection_data = None
+
+        return detection_data
 
     def enable_frame_saving(self):
 

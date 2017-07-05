@@ -54,6 +54,7 @@ class HomeCamManager:
                            config=self._hc_config)
 
         self._running = False
+        self._latest_cascade_status = None
 
     def _set_default_config(self):
 
@@ -174,18 +175,46 @@ class HomeCamManager:
 
         while self._running:
 
-            objects = self._hc.read_and_process_frame()
+            detection_data = self._hc.read_and_process_frame()
 
-            if objects is not None:
-                if not object_detected:
-                    self._logger.info("Object(s) detected")
-                    self._hc.enable_frame_saving()
-                object_detected = True
-            else:
+            if detection_data is None:
                 if object_detected:
                     self._logger.info("No object(s) detected")
                     self._hc.disable_frame_saving()
                 object_detected = False
+                continue
+
+            if self._latest_cascade_status is None:
+                # Special case: Initially we don't have any saved cascade
+                # status, so we use the cascades from first processed frames
+                # for initialization.
+                self._latest_cascade_status = {}
+                for cascade_file in detection_data.cascade_status:
+                    self._latest_cascade_status[cascade_file] = False
+
+            for cascade_file, status in detection_data.cascade_status.items():
+                if status != self._latest_cascade_status[cascade_file]:
+                    # The detection status of the current cascade has changed
+                    if status:
+                        self._logger.info("Cascade: {} has detected (an) object(s)".format(cascade_file))
+                        self._logger.info("  Rectangles:")
+                        for rectangle in detection_data.rectangles[cascade_file]:
+                            self._logger.info("    {}".format(rectangle))
+                    else:
+                        self._logger.info("Cascade: {} no longer detects any object(s)".format(cascade_file))
+
+            self._latest_cascade_status = detection_data.cascade_status
+
+            object_detected_new = False
+            for status in self._latest_cascade_status:
+                if status:
+                    object_detected_new = True
+                    break
+
+            if object_detected_new and not object_detected:
+                self._hc.enable_frame_saving()
+
+            object_detected = object_detected_new
 
             time.sleep(1 / self._hc_config.recording_fps)
 
