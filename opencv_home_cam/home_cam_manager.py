@@ -3,7 +3,11 @@ import logging
 import configparser
 import time
 import ast
+import os
+import datetime
+import subprocess
 from collections import namedtuple
+import re
 from opencv_home_cam import HomeCam, HomeCamException, HomeCamConfig
 
 
@@ -35,6 +39,14 @@ def cast_string_to_tuple(s):
         return None
 
 
+ActionConfig = namedtuple('ActionConfig',
+                          ['command',
+                           'cascade_regexes',
+                           'trigger_detection',
+                           'trigger_no_detection'],
+                          verbose=False)
+
+
 class HomeCamManager:
 
     def __init__(self, config_file, cascade_files):
@@ -49,6 +61,8 @@ class HomeCamManager:
             self._read_recording_config()
         if 'detection' in self._cp:
             self._read_detection_config()
+
+        self._read_actions()
 
         self._hc = HomeCam(cascade_files=cascade_files,
                            config=self._hc_config)
@@ -69,6 +83,22 @@ class HomeCamManager:
                                         recording_enable=False,
                                         recording_dir=None,
                                         recording_file_base=None)
+
+    def _read_actions(self):
+
+        action_nbr = 0
+        self._actions = []
+
+        while True:
+            action_section = 'action' + str(action_nbr)
+            if not action_section in self._cp:
+                break
+
+            action = self._read_action_config(action_section)
+            if action is not None:
+                self._actions.append(action)
+
+            action_nbr += 1
 
     def _read_recording_config(self):
 
@@ -155,6 +185,62 @@ class HomeCamManager:
         else:
             self._logger.info("Config: Missing size value, using default")
 
+    def _read_action_config(self, action_section):
+
+        action_cfg = self._cp[action_section]
+
+        if 'command' in action_cfg:
+            command = action_cfg['command']
+            if command is None:
+                self._logger.error("Bad command for section {}!".format(action_section))
+        else:
+            self._logger.error("Missing command for section {}!".format(action_section))
+            return None
+
+        if 'cascades' in action_cfg:
+            cascades_str = action_cfg['cascades']
+            if cascades_str is None:
+                self._logger.error("Config: bad cascades!")
+            cascades_str_a = cascades_str.split(",")
+            cascade_regexes = []
+            for cascade in cascades_str_a:
+                cur_regex = re.compile(cascade.strip())
+                cascade_regexes.append(cur_regex)
+        else:
+            self._logger.info("Missing cascades for section {}".format(action_section))
+            self._logger.info("Action will be invoked for all cascades.")
+            cascade_regexes = [re.compile('.*')]
+
+        if 'triggers' in action_cfg:
+            triggers_str = action_cfg['triggers']
+            if triggers_str is None:
+                self._logger.error("Config: bad trigger!")
+            triggers = triggers_str.split(",")
+            for trigger in triggers:
+                trigger.strip()
+                # We accept a few different string values for triggers.
+                # Detection triggers:
+                if (trigger.lower() == 'detect' or
+                    trigger.lower() == 'detection' or
+                    trigger.lower() == 'match'):
+                    trigger_detection = True
+                # Non-detection triggers:
+                elif (trigger.lower() == 'undetect' or
+                      trigger.lower() == 'no-detect' or
+                      trigger.lower() == 'no-match'):
+                    trigger_no_detection = True
+        else:
+            self._logger.info("Missing triggers for section {}".format(action_section))
+            self._logger.info("Using default triggers")
+            trigger_detection = True
+            trigger_no_detection = False
+
+        action_config = ActionConfig(command=command,
+                                     cascade_regexes=cascade_regexes,
+                                     trigger_detection=trigger_detection,
+                                     trigger_no_detection=trigger_no_detection)
+        return action_config
+
     def start(self):
 
         self._running = True
@@ -203,6 +289,8 @@ class HomeCamManager:
                     else:
                         self._logger.info("Cascade: {} no longer detects any object(s)".format(cascade_file))
 
+                    self._invoke_action(status, cascade_file)
+
             self._latest_cascade_status = detection_data.cascade_status
 
             object_detected_new = False
@@ -219,3 +307,37 @@ class HomeCamManager:
             time.sleep(1 / self._hc_config.recording_fps)
 
         self._hc.close()
+
+    def _invoke_action(self, detection, cascade):
+
+        for action in self._actions:
+            if ((action.trigger_detection and detection) or
+                (action.trigger_no_detection and not detection)):
+                for cascade_regex in action.cascade_regexes:
+                    match = cascade_regex.match(cascade)
+                    if match:
+                        # It is time to invoke the action script
+                        self._invoke_action_command(detection,
+                                                    cascade,
+                                                    action.command)
+                        break
+
+    def _invoke_action_command(self, detection, cascade, command):
+
+        # Setup environment variables that will be passed to the child
+        # (action command)
+        ts_raw = time.time()
+        ts_date = datetime.datetime.fromtimestamp(ts_raw).strftime('%Y-%m-%d %H:%M:%S')
+
+        os.environ["TIME_STAMP_RAW"] = str(ts_raw)
+        os.environ["TIME_STAMP_DATE"] = ts_date
+        os.environ["CASCADE"] = cascade
+        if detection:
+            os.environ["TRIGGER"] = "detect"
+        else:
+            os.environ["TRIGGER"] = "no-detect"
+
+        # Launch command and wait for it to complete.
+        res = subprocess.run(command)
+        if res.returncode != 0:
+            self._logger.warning("Command {} returned non-zero exitcode ({})".format(command, res.returncode))
