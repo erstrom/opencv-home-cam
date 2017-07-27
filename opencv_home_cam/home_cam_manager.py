@@ -26,9 +26,15 @@ def cast_string_to_int(s):
 
 
 def cast_string_to_bool(s):
-    try:
-        return bool(s)
-    except ValueError:
+    if (s.lower() == 'true' or
+        s.lower() == '1' or
+        s.lower() == 'on'):
+        return True
+    elif (s.lower() == 'false' or
+          s.lower() == '0' or
+          s.lower() == 'off'):
+        return False
+    else:
         return None
 
 
