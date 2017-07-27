@@ -88,6 +88,7 @@ class HomeCam:
             raise HomeCamException("Bad resolution")
 
         if config.recording_enable:
+            self._logger.info("Video recording enabled")
             self._recording_fps = config.recording_fps
             self._recording_resolution = config.recording_resolution
             self._recording_file_limit = config.recording_file_limit
@@ -231,12 +232,10 @@ class HomeCam:
 
     def enable_frame_saving(self):
 
-        self._logger.info("Frame saving enabled")
         self._save_frame = True
 
     def disable_frame_saving(self):
 
-        self._logger.info("Frame saving disabled")
         self._save_frame = False
 
     def close(self):
