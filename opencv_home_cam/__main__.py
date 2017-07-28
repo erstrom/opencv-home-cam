@@ -6,7 +6,7 @@ import cv2
 import signal
 import logging
 import logging.config
-from opencv_home_cam import HomeCamManager, HomeCamException
+from opencv_home_cam import HomeCamManager, HomeCamException, HomeCamManagerException
 
 description = "OpenCV home cam test app"
 
@@ -79,6 +79,8 @@ def main():
     except IOError as err:
         sys.stderr.write('{}\n'.format(err))
     except HomeCamException as err:
+        sys.stderr.write('{}\n'.format(err))
+    except HomeCamManagerException as err:
         sys.stderr.write('{}\n'.format(err))
     except:
         traceback.print_exc()

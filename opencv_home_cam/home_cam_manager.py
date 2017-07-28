@@ -53,6 +53,11 @@ ActionConfig = namedtuple('ActionConfig',
                           verbose=False)
 
 
+class HomeCamManagerException(Exception):
+
+    pass
+
+
 class HomeCamManager:
 
     def __init__(self, config_file, cascade_files):
@@ -113,58 +118,58 @@ class HomeCamManager:
         if 'fps' in rec_cfg:
             self._hc_config = self._hc_config._replace(recording_fps=cast_string_to_float(rec_cfg['fps']))
             if self._hc_config.recording_fps is None:
-                self._logger.error("Config: bad fps value!")
+                raise HomeCamManagerException("Config: bad fps value!")
         else:
             self._logger.info("Config: Missing fps value, using default")
 
         if 'resolution' in rec_cfg:
             self._hc_config = self._hc_config._replace(recording_resolution=cast_string_to_tuple(rec_cfg['resolution']))
             if self._hc_config.recording_resolution is None:
-                self._logger.error("Config: bad resolution value!")
+                raise HomeCamManagerException("Config: bad resolution value!")
         else:
             self._logger.info("Config: Missing resolution value, using default")
 
         if 'file_limit' in rec_cfg:
             self._hc_config = self._hc_config._replace(recording_file_limit=cast_string_to_int(rec_cfg['file_limit']))
             if self._hc_config.recording_file_limit is None:
-                self._logger.error("Config: bad file_limit value!")
+                raise HomeCamManagerException("Config: bad file_limit value!")
         else:
             self._logger.info("Config: Missing file_limit value, using default")
 
         if 'time_limit' in rec_cfg:
             self._hc_config = self._hc_config._replace(recording_time_limit=cast_string_to_int(rec_cfg['time_limit']))
             if self._hc_config.recording_time_limit is None:
-                self._logger.error("Config: bad time_limit value!")
+                raise HomeCamManagerException("Config: bad time_limit value!")
         else:
             self._logger.info("Config: Missing time_limit value, using default")
 
         if 'cam_id' in rec_cfg:
             self._hc_config = self._hc_config._replace(recording_cam_id=cast_string_to_int(rec_cfg['cam_id']))
             if self._hc_config.recording_cam_id is None:
-                self._logger.error("Config: bad cam_id value!")
+                raise HomeCamManagerException("Config: bad cam_id value!")
         else:
             self._logger.info("Config: Missing cam_id value, using default")
 
         if 'enable' in rec_cfg:
             self._hc_config = self._hc_config._replace(recording_enable=cast_string_to_bool(rec_cfg['enable']))
             if self._hc_config.recording_enable is None:
-                self._logger.error("Config: Bad output enable option!")
+                raise HomeCamManagerException("Config: Bad output enable option!")
         else:
             self._logger.info("Config: Missing enable value, using default")
 
         if 'recording_dir' in rec_cfg:
             self._hc_config = self._hc_config._replace(recording_dir=rec_cfg['recording_dir'])
             if self._hc_config.recording_dir is None:
-                self._logger.error("Config: Bad output directory path!")
+                raise HomeCamManagerException("Config: Bad output directory path!")
         elif self._hc_config.recording_enable is not None:
-            self._logger.error("Config: Missing recording_dir value!")
+            raise HomeCamManagerException("Config: Missing recording_dir value!")
 
         if 'recording_file_base' in rec_cfg:
             self._hc_config = self._hc_config._replace(recording_file_base=rec_cfg['recording_file_base'])
             if self._hc_config.recording_file_base is None:
-                self._logger.error("Config: Bad output file base!")
+                raise HomeCamManagerException("Config: Bad output file base!")
         elif self._hc_config.recording_enable is not None:
-            self._logger.error("Config: Missing recording_file_base value!")
+            raise HomeCamManagerException("Config: Missing recording_file_base value!")
 
     def _read_detection_config(self):
 
@@ -173,21 +178,21 @@ class HomeCamManager:
         if 'scale_factor' in detection_cfg:
             self._hc_config = self._hc_config._replace(detection_scale_factor=cast_string_to_float(detection_cfg['scale_factor']))
             if self._hc_config.detection_scale_factor is None:
-                self._logger.error("Config: bad scale_factor value!")
+                raise HomeCamManagerException("Config: bad scale_factor value!")
         else:
             self._logger.info("Config: Missing scale_factor value, using default")
 
         if 'min_neighbours' in detection_cfg:
             self._hc_config = self._hc_config._replace(detection_min_neighbours=cast_string_to_int(detection_cfg['min_neighbours']))
             if self._hc_config.detection_min_neighbours is None:
-                self._logger.error("Config: bad min_neighbours value!")
+                raise HomeCamManagerException("Config: bad min_neighbours value!")
         else:
             self._logger.info("Config: Missing min_neighbours value, using default")
 
         if 'size' in detection_cfg:
             self._hc_config = self._hc_config._replace(detection_size=cast_string_to_int(detection_cfg['size']))
             if self._hc_config.detection_size is None:
-                self._logger.error("Config: bad size value!")
+                raise HomeCamManagerException("Config: bad size value!")
         else:
             self._logger.info("Config: Missing size value, using default")
 
@@ -198,15 +203,14 @@ class HomeCamManager:
         if 'command' in action_cfg:
             command = action_cfg['command']
             if command is None:
-                self._logger.error("Bad command for section {}!".format(action_section))
+                raise HomeCamManagerException("Bad command for section {}!".format(action_section))
         else:
-            self._logger.error("Missing command for section {}!".format(action_section))
-            return None
+            raise HomeCamManagerException("Missing command for section {}!".format(action_section))
 
         if 'cascades' in action_cfg:
             cascades_str = action_cfg['cascades']
             if cascades_str is None:
-                self._logger.error("Config: bad cascades!")
+                raise HomeCamManagerException("Config: bad cascades!")
             cascades_str_a = cascades_str.split(",")
             cascade_regexes = []
             for cascade in cascades_str_a:
@@ -220,7 +224,7 @@ class HomeCamManager:
         if 'triggers' in action_cfg:
             triggers_str = action_cfg['triggers']
             if triggers_str is None:
-                self._logger.error("Config: bad trigger!")
+                raise HomeCamManagerException("Config: bad trigger!")
             triggers = triggers_str.split(",")
             for trigger in triggers:
                 trigger.strip()
