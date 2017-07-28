@@ -97,7 +97,7 @@ class HomeCamManager:
 
         while True:
             action_section = 'action' + str(action_nbr)
-            if not action_section in self._cp:
+            if action_section not in self._cp:
                 break
 
             action = self._read_action_config(action_section)
@@ -268,13 +268,6 @@ class HomeCamManager:
         while self._running:
 
             detection_data = self._hc.read_and_process_frame()
-
-            if detection_data is None:
-                if object_detected:
-                    self._logger.info("No object(s) detected")
-                    self._hc.disable_frame_saving()
-                object_detected = False
-                continue
 
             if self._latest_cascade_status is None:
                 # Special case: Initially we don't have any saved cascade
