@@ -196,6 +196,8 @@ class HomeCam:
             return None
 
         ret, frame = self._video_capture.read()
+        if not ret:
+            return None
 
         frame_gs = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
