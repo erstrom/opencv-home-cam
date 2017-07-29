@@ -84,7 +84,6 @@ class HomeCamManager:
 
         self._hc_config = HomeCamConfig(recording_cam_id=0,
                                         recording_fps=20.0,
-                                        recording_resolution=(640, 480),
                                         recording_file_limit=10,
                                         recording_time_limit=60,
                                         detection_scale_factor=1.1,
@@ -121,13 +120,6 @@ class HomeCamManager:
                 raise HomeCamManagerException("Config: bad fps value!")
         else:
             self._logger.info("Config: Missing fps value, using default")
-
-        if 'resolution' in rec_cfg:
-            self._hc_config = self._hc_config._replace(recording_resolution=cast_string_to_tuple(rec_cfg['resolution']))
-            if self._hc_config.recording_resolution is None:
-                raise HomeCamManagerException("Config: bad resolution value!")
-        else:
-            self._logger.info("Config: Missing resolution value, using default")
 
         if 'file_limit' in rec_cfg:
             self._hc_config = self._hc_config._replace(recording_file_limit=cast_string_to_int(rec_cfg['file_limit']))

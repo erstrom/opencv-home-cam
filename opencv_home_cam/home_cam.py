@@ -23,7 +23,6 @@ else:
 HomeCamConfig = namedtuple('HomeCamConfig',
                            ['recording_cam_id',
                             'recording_fps',
-                            'recording_resolution',
                             'recording_file_limit',
                             'recording_time_limit',
                             'recording_enable',
@@ -96,13 +95,15 @@ class HomeCam:
         if self._video_capture is None:
             raise HomeCamException("Unable to open camera")
 
-        if not isinstance(config.recording_resolution, tuple):
-            raise HomeCamException("Bad resolution")
+        # Get the resolution of the capture device and use the same value for
+        # recording
+        width = self._video_capture.get(3)
+        height = self._video_capture.get(4)
+        self._recording_resolution = (int(width), int(height))
 
         if config.recording_enable:
             self._logger.info("Video recording enabled")
             self._recording_fps = config.recording_fps
-            self._recording_resolution = config.recording_resolution
             self._recording_file_limit = config.recording_file_limit
             self._recording_frame_limit = config.recording_time_limit * config.recording_fps
 
