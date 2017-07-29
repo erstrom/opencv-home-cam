@@ -60,7 +60,7 @@ class HomeCamManagerException(Exception):
 
 class HomeCamManager:
 
-    def __init__(self, config_file, cascade_files):
+    def __init__(self, config_file):
 
         self._logger = logging.getLogger(__name__)
         self._set_default_config()
@@ -75,8 +75,7 @@ class HomeCamManager:
 
         self._read_actions()
 
-        self._hc = HomeCam(cascade_files=cascade_files,
-                           config=self._hc_config)
+        self._hc = HomeCam(config=self._hc_config)
 
         self._running = False
         self._latest_cascade_status = None
@@ -91,6 +90,7 @@ class HomeCamManager:
                                         detection_scale_factor=1.1,
                                         detection_min_neighbours=3,
                                         detection_size=3,
+                                        detection_cascade_files=[],
                                         recording_enable=False,
                                         recording_dir=None,
                                         recording_file_base=None)
@@ -174,6 +174,15 @@ class HomeCamManager:
     def _read_detection_config(self):
 
         detection_cfg = self._cp['detection']
+
+        if 'cascades' in detection_cfg:
+            cascades_str = detection_cfg['cascades']
+            if cascades_str is None:
+                raise HomeCamManagerException("Config: bad cascades!")
+            cascades_str_a = cascades_str.split(",")
+            self._hc_config = self._hc_config._replace(detection_cascade_files=cascades_str_a)
+        else:
+            raise HomeCamManagerException("Config: Missing cascade files!")
 
         if 'scale_factor' in detection_cfg:
             self._hc_config = self._hc_config._replace(detection_scale_factor=cast_string_to_float(detection_cfg['scale_factor']))

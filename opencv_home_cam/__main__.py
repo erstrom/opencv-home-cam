@@ -25,8 +25,6 @@ def load_options():
     parser = argparse.ArgumentParser(prog="home_cam_tester",
                                      description=description)
 
-    parser.add_argument('-a', '--cascade-file', nargs='+', type=str,
-                        help="Cascade file(s) for OpenCV.")
     parser.add_argument('-c', '--config-file',
                         help="Configuraton file.")
     parser.add_argument('-l', '--log-config-file',
@@ -46,10 +44,6 @@ def main():
 
     try:
 
-        if not parsed_args.cascade_file:
-            sys.stderr.write('Missing input cascade file(s)\n')
-            exit(1)
-
         if not parsed_args.config_file:
             sys.stderr.write('Missing input config file\n')
             exit(1)
@@ -68,8 +62,7 @@ def main():
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
 
-        hcm = HomeCamManager(config_file=parsed_args.config_file,
-                             cascade_files=parsed_args.cascade_file)
+        hcm = HomeCamManager(config_file=parsed_args.config_file)
 
         hcm.start()
         logger.info("Waiting for HomeCamManager to finish\n")

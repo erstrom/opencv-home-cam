@@ -31,7 +31,8 @@ HomeCamConfig = namedtuple('HomeCamConfig',
                             'recording_file_base',
                             'detection_scale_factor',
                             'detection_min_neighbours',
-                            'detection_size'],
+                            'detection_size',
+                            'detection_cascade_files'],
                            verbose=False)
 
 
@@ -56,10 +57,11 @@ class HomeCamException(Exception):
 
 class HomeCam:
 
-    def __init__(self, cascade_files, config):
+    def __init__(self, config):
 
         self._logger = logging.getLogger(__name__)
-        if cascade_files is None:
+
+        if config.detection_cascade_files is None:
             raise HomeCamException("Missing cascade file(s)")
 
         self._min_neighbours = config.detection_min_neighbours
@@ -68,17 +70,11 @@ class HomeCam:
         self._cascades = []
         self._save_frame = False
 
-        if isinstance(cascade_files, basestring):
-            cur_cascade = cv2.CascadeClassifier(cascade_files)
+        for cascade_file in config.detection_cascade_files:
+            cur_cascade = cv2.CascadeClassifier(cascade_file)
             if cur_cascade is None:
                 raise HomeCamException("Bad cascade file")
-            self._cascades.append((cascade_files, cur_cascade))
-        elif isinstance(cascade_files, (list, tuple)):
-            for cascade_file in cascade_files:
-                cur_cascade = cv2.CascadeClassifier(cascade_file)
-                if cur_cascade is None:
-                    raise HomeCamException("Bad cascade file")
-                self._cascades.append((cascade_file, cur_cascade))
+            self._cascades.append((cascade_file, cur_cascade))
 
         self._video_capture = cv2.VideoCapture(int(config.recording_cam_id))
         if self._video_capture is None:
