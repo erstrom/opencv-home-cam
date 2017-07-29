@@ -50,6 +50,16 @@ HomeCamDetectionData = namedtuple('HomeCamDetectionData',
                                   verbose=False)
 
 
+# Hard coded BGR tuples for rectangles
+BGR_RED = (0, 0, 255)
+BGR_GREEN = (0, 255, 0)
+BGR_BLUE = (255, 0, 0)
+BGR_YELLOW = (0, 255, 255)
+BGR_CYAN = (255, 255, 0)
+BGR_MAGENTA = (255, 0, 255)
+COLORS = [BGR_RED, BGR_GREEN, BGR_BLUE, BGR_YELLOW, BGR_CYAN, BGR_MAGENTA]
+
+
 class HomeCamException(Exception):
 
     pass
@@ -69,12 +79,18 @@ class HomeCam:
         self._size = config.detection_size
         self._cascades = []
         self._save_frame = False
+        color_cnt = 0
 
         for cascade_file in config.detection_cascade_files:
             cur_cascade = cv2.CascadeClassifier(cascade_file)
             if cur_cascade is None:
                 raise HomeCamException("Bad cascade file")
-            self._cascades.append((cascade_file, cur_cascade))
+            # Associate a color with the cascade.
+            # The color will be used when drawing rectangles in the recordings
+            # of all detections made with the cascade.
+            rgb_tuple = COLORS[color_cnt % len(COLORS)]
+            color_cnt += 1
+            self._cascades.append((cascade_file, cur_cascade, rgb_tuple))
 
         self._video_capture = cv2.VideoCapture(int(config.recording_cam_id))
         if self._video_capture is None:
@@ -190,7 +206,7 @@ class HomeCam:
         # Initialize the detection data
         cascade_status = {}
         rectangles = {}
-        for (cascade_file, cascade) in self._cascades:
+        for (cascade_file, cascade, rgb_tuple) in self._cascades:
             cascade_status[cascade_file] = False
             rectangles[cascade_file] = None
 
@@ -209,7 +225,7 @@ class HomeCam:
         frame_gs = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         # Check detections for each cascade
-        for (cascade_file, cascade) in self._cascades:
+        for (cascade_file, cascade, rgb_tuple) in self._cascades:
             obj = cascade.detectMultiScale(frame_gs,
                                            scaleFactor=self._scale_factor,
                                            minNeighbors=self._min_neighbours,
@@ -219,6 +235,9 @@ class HomeCam:
 
             cascade_status[cascade_file] = True
             rectangles[cascade_file] = obj
+
+            for (x, y, w, h) in obj:
+                cv2.rectangle(frame, (x, y), (x+w, y+h), rgb_tuple, 2)
 
         if self._save_frame and self._outfile is not None:
             self._do_save_frame(frame)
