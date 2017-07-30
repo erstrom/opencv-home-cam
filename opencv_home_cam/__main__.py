@@ -8,7 +8,7 @@ import logging
 import logging.config
 from opencv_home_cam import HomeCamManager, HomeCamException, HomeCamManagerException
 
-description = "OpenCV home cam test app"
+description = "OpenCV home cam. See README.rst for full documentation"
 
 
 def signal_handler(signal, frame):
@@ -22,11 +22,12 @@ def signal_handler(signal, frame):
 def load_options():
 
     global parsed_args
-    parser = argparse.ArgumentParser(prog="home_cam_tester",
+    parser = argparse.ArgumentParser(prog="opencv_home_cam",
                                      description=description)
 
     parser.add_argument('-c', '--config-file',
-                        help="Configuraton file.")
+                        help="Configuraton file. Contains configuration "
+                             "options for recording, detection and actions.")
     parser.add_argument('-l', '--log-config-file',
                         help="Logging configuraton file. This is the "
                              "configuration for the Python logging "
