@@ -226,6 +226,8 @@ class HomeCamManager:
             triggers_str = action_cfg['triggers']
             if triggers_str is None:
                 raise HomeCamManagerException("Config: bad trigger!")
+            trigger_detection = False
+            trigger_no_detection = False
             triggers = triggers_str.split(",")
             for trigger in triggers:
                 trigger.strip()
