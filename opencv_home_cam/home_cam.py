@@ -1,5 +1,6 @@
 import numpy
 import cv2
+import imutils
 import os
 import re
 import logging
@@ -99,7 +100,12 @@ class HomeCam:
         # recording
         width = self._video_capture.get(3)
         height = self._video_capture.get(4)
-        self._recording_resolution = (int(width), int(height))
+        # We are going to resize all captured frames to a width of max 400 pixels,
+        # so we must make sure the recording resolution matches the rescaled
+        # frames.
+        rec_width = min(400, width)
+        rec_height = rec_width * height / width
+        self._recording_resolution = (int(rec_width), int(rec_height))
 
         if config.recording_enable:
             self._logger.info("Video recording enabled")
@@ -222,6 +228,13 @@ class HomeCam:
             return HomeCamDetectionData(frame=None,
                                         cascade_status=cascade_status,
                                         rectangles=rectangles)
+
+        # Resize the frame.
+        # Below code snippet is taken from:
+        # http://www.pyimagesearch.com/2015/11/09/pedestrian-detection-opencv/
+        # load the image and resize it to (1) reduce detection time
+        # and (2) improve detection accuracy
+        frame = imutils.resize(frame, width=min(400, frame.shape[1]))
 
         frame_gs = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
