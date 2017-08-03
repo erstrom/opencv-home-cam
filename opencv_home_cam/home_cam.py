@@ -256,7 +256,7 @@ class HomeCam:
         if self._save_frame and self._outfile is not None:
             self._do_save_frame(frame)
 
-        return HomeCamDetectionData(frame=frame_gs,
+        return HomeCamDetectionData(frame=frame,
                                     cascade_status=cascade_status,
                                     rectangles=rectangles)
 
