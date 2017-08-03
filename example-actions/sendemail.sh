@@ -27,6 +27,19 @@ Action cascade: $CASCADE
 Action trigger: $TRIGGER
 EOF
 
+if [[ ! -z ${IMAGE_PATH+x} ]] && [[ "$IMAGE_PATH" != "No image" ]]; then
+	# We should attach a jpg image with the email
+	if [[ ! -f $IMAGE_PATH ]] ; then
+		echo "$IMAGE_PATH does not exist!"
+		exit 1
+	fi
+	ATTACHMENT="-a $IMAGE_PATH"
+
+	echo "" >> $TEMP_EMAIL_NAME
+	echo "The frame that caused this email to be generated has been added as an attachment." >> $TEMP_EMAIL_NAME
+	echo "Attachment: $IMAGE_PATH" >> $TEMP_EMAIL_NAME
+fi
+
 echo "Sending email. From $FROM_ADDR, to: $TO_ADDR"
 
 sendemail \
@@ -37,7 +50,8 @@ sendemail \
     -o tls=yes \
     -xu $FROM_ADDR \
     -xp $SMTP_PASSWD \
-    -o message-file=$TEMP_EMAIL_NAME
+    -o message-file=$TEMP_EMAIL_NAME \
+    $ATTACHMENT
 
 # Remove the temporary email content file
 rm $TEMP_EMAIL_NAME
