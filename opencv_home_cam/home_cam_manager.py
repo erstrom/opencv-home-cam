@@ -1,3 +1,4 @@
+import cv2
 import threading
 import logging
 import configparser
@@ -8,6 +9,7 @@ import datetime
 import subprocess
 from collections import namedtuple
 import re
+import tempfile
 from opencv_home_cam import HomeCam, HomeCamException, HomeCamConfig
 
 
@@ -49,7 +51,9 @@ ActionConfig = namedtuple('ActionConfig',
                           ['command',
                            'cascade_regexes',
                            'trigger_detection',
-                           'trigger_no_detection'],
+                           'trigger_no_detection',
+                           'save_frame',
+                           'save_frame_dir'],
                           verbose=False)
 
 
@@ -248,10 +252,30 @@ class HomeCamManager:
             trigger_detection = True
             trigger_no_detection = False
 
+        if 'save_frame' in action_cfg:
+            save_frame = cast_string_to_bool(action_cfg['save_frame'])
+            if save_frame is None:
+                raise HomeCamManagerException("Config: Bad save_frame option for section {}!".format(action_section))
+        else:
+            self._logger.info("Missing save_frame option for section {}".format(action_section))
+            self._logger.info("Skipping detection frame saving")
+            save_frame = False
+
+        if 'save_frame_dir' in action_cfg:
+            save_frame_dir = action_cfg['save_frame_dir']
+            if save_frame_dir is None:
+                raise HomeCamManagerException("Config: Bad save_frame_dir option for section {}!".format(action_section))
+        else:
+            save_frame_dir = "/tmp"
+            self._logger.info("Missing save_frame_dir option for section {}".format(action_section))
+            self._logger.info("Using default dir: {}".format(save_frame_dir))
+
         action_config = ActionConfig(command=command,
                                      cascade_regexes=cascade_regexes,
                                      trigger_detection=trigger_detection,
-                                     trigger_no_detection=trigger_no_detection)
+                                     trigger_no_detection=trigger_no_detection,
+                                     save_frame=save_frame,
+                                     save_frame_dir=save_frame_dir)
         return action_config
 
     def start(self):
@@ -295,7 +319,7 @@ class HomeCamManager:
                     else:
                         self._logger.info("Cascade: {} no longer detects any object(s)".format(cascade_file))
 
-                    self._invoke_action(status, cascade_file)
+                    self._invoke_action(status, cascade_file, detection_data.frame)
 
             self._latest_cascade_status = detection_data.cascade_status
 
@@ -314,7 +338,7 @@ class HomeCamManager:
 
         self._hc.close()
 
-    def _invoke_action(self, detection, cascade):
+    def _invoke_action(self, detection, cascade, frame):
 
         for action in self._actions:
             if ((action.trigger_detection and detection) or
@@ -322,13 +346,26 @@ class HomeCamManager:
                 for cascade_regex in action.cascade_regexes:
                     match = cascade_regex.match(cascade)
                     if match:
+                        if action.save_frame:
+                            # Create a temporary file for the current frame
+                            image = tempfile.NamedTemporaryFile(suffix='.jpg',
+                                                                prefix='opencv-home-cam-',
+                                                                dir=action.save_frame_dir)
+                            image_path = image.name
+                            cv2.imwrite(image_path, frame)
+                        else:
+                            image_path = "No image"
                         # It is time to invoke the action script
                         self._invoke_action_command(detection,
                                                     cascade,
-                                                    action.command)
+                                                    action.command,
+                                                    image_path)
+                        if action.save_frame:
+                            # Remove the temporary file.
+                            image.close()
                         break
 
-    def _invoke_action_command(self, detection, cascade, command):
+    def _invoke_action_command(self, detection, cascade, command, image_path):
 
         # Setup environment variables that will be passed to the child
         # (action command)
@@ -342,6 +379,7 @@ class HomeCamManager:
             os.environ["TRIGGER"] = "detect"
         else:
             os.environ["TRIGGER"] = "no-detect"
+        os.environ["IMAGE_PATH"] = image_path
 
         # Launch command and wait for it to complete.
         res = subprocess.run(command)
