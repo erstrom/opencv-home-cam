@@ -108,6 +108,7 @@ Each action section will set the below options for the particular action:
 - command
 - cascades
 - triggers
+- save_frame
 
 The *command* option is the path to the script that is going to be launched.
 
@@ -127,6 +128,12 @@ values will be used. The default cascades option is the string ``.*``, i.e.,
 detections by all cascades will yield an action invocation (provided that the
 *triggers* criterion is met). The default trigger option is ``detect``
 
+The *save_frame* option will make opencv-home-cam save the frame that caused
+the launch of the action script into a temporary file. The path to the
+temporary file will be passed on to the action script with the **IMAGE_PATH**
+environment variable. The temporary file will be removed as soon as the
+action script terminates.
+
 Actions are optional, and if no action is desired, no ``action%d`` section
 needs to be specified.
 
@@ -138,6 +145,8 @@ variables. They are listed below:
 - **TIME_STAMP_DATE**: A human readable string of the time stamp in the
   following format: YYYY-MM-DD HH:MM:SS
 - **CASCADE**: The cascade file that trigged the action invocation.
+- **IMAGE_PATH**: The path to a jpg file containing the frame that caused
+  the action to be invoked.
 
 If the action is associated with several cascades, the action script might
 be launch several time for each cascade that has yielded an object detection.
