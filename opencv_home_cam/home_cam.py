@@ -5,6 +5,7 @@ import os
 import re
 import logging
 from collections import namedtuple
+from .detector import Detector
 try:
     unicode = unicode
 except NameError:
@@ -28,36 +29,22 @@ HomeCamConfig = namedtuple('HomeCamConfig',
                             'recording_time_limit',
                             'recording_enable',
                             'recording_dir',
-                            'recording_file_base',
-                            'detection_scale_factor',
-                            'detection_min_neighbours',
-                            'detection_size',
-                            'detection_cascade_files'],
+                            'recording_file_base'],
                            verbose=False)
 
 
 # frame          - The current frame (image)
-# cascade_status - A dict of detection status (boolean) for all cascades.
-#                  The current cascade file is the dict key.
-#                  True => The cascade has detected an object, False => No detection.
+# detector_status - A dict of detection status (boolean) for all detectors.
+#                  The detector name is the dict key.
+#                  True => The detector has detected an object, False => No detection.
 # rectangles     - A dict of (x, y, width, height) tuples forming a rectangle
-#                  of each match in the current frame. The current cascade
-#                  file is the dict key.
+#                  of each match in the current frame. The current detector
+#                  name is the dict key.
 HomeCamDetectionData = namedtuple('HomeCamDetectionData',
                                   ['frame',
-                                   'cascade_status',
+                                   'detector_status',
                                    'rectangles'],
                                   verbose=False)
-
-
-# Hard coded BGR tuples for rectangles
-BGR_RED = (0, 0, 255)
-BGR_GREEN = (0, 255, 0)
-BGR_BLUE = (255, 0, 0)
-BGR_YELLOW = (0, 255, 255)
-BGR_CYAN = (255, 255, 0)
-BGR_MAGENTA = (255, 0, 255)
-COLORS = [BGR_RED, BGR_GREEN, BGR_BLUE, BGR_YELLOW, BGR_CYAN, BGR_MAGENTA]
 
 
 class HomeCamException(Exception):
@@ -67,30 +54,16 @@ class HomeCamException(Exception):
 
 class HomeCam:
 
-    def __init__(self, config):
+    def __init__(self, config, detectors):
 
         self._logger = logging.getLogger(__name__)
 
-        if config.detection_cascade_files is None:
-            raise HomeCamException("Missing cascade file(s)")
+        if detectors is None:
+            raise HomeCamException("Missing detector(s)")
 
-        self._min_neighbours = config.detection_min_neighbours
-        self._scale_factor = config.detection_scale_factor
-        self._size = config.detection_size
-        self._cascades = []
+        self._detectors = detectors
         self._save_frame = False
         color_cnt = 0
-
-        for cascade_file in config.detection_cascade_files:
-            cur_cascade = cv2.CascadeClassifier(cascade_file)
-            if cur_cascade is None:
-                raise HomeCamException("Bad cascade file")
-            # Associate a color with the cascade.
-            # The color will be used when drawing rectangles in the recordings
-            # of all detections made with the cascade.
-            rgb_tuple = COLORS[color_cnt % len(COLORS)]
-            color_cnt += 1
-            self._cascades.append((cascade_file, cur_cascade, rgb_tuple))
 
         self._video_capture = cv2.VideoCapture(int(config.recording_cam_id))
         if self._video_capture is None:
@@ -211,22 +184,22 @@ class HomeCam:
     def read_and_process_frame(self):
 
         # Initialize the detection data
-        cascade_status = {}
+        detector_status = {}
         rectangles = {}
-        for (cascade_file, cascade, rgb_tuple) in self._cascades:
-            cascade_status[cascade_file] = False
-            rectangles[cascade_file] = None
+        for detector in self._detectors:
+            detector_status[detector.get_name()] = False
+            rectangles[detector.get_name()] = None
 
         # Check error conditions
         if not self._video_capture.isOpened():
             return HomeCamDetectionData(frame=None,
-                                        cascade_status=cascade_status,
+                                        detector_status=detector_status,
                                         rectangles=rectangles)
 
         ret, frame = self._video_capture.read()
         if not ret:
             return HomeCamDetectionData(frame=None,
-                                        cascade_status=cascade_status,
+                                        detector_status=detector_status,
                                         rectangles=rectangles)
 
         # Resize the frame.
@@ -238,26 +211,27 @@ class HomeCam:
 
         frame_gs = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-        # Check detections for each cascade
-        for (cascade_file, cascade, rgb_tuple) in self._cascades:
-            obj = cascade.detectMultiScale(frame_gs,
-                                           scaleFactor=self._scale_factor,
-                                           minNeighbors=self._min_neighbours,
-                                           minSize=(self._size, self._size))
+        # Check detections for each detector
+        for detector in self._detectors:
+            obj = detector.detect(frame_gs)
+
             if len(obj) == 0:
                 continue
 
-            cascade_status[cascade_file] = True
-            rectangles[cascade_file] = obj
+            detector_status[detector.get_name()] = True
+            rectangles[detector.get_name()] = obj
 
             for (x, y, w, h) in obj:
-                cv2.rectangle(frame, (x, y), (x+w, y+h), rgb_tuple, 2)
+                cv2.rectangle(frame, (x, y),
+                              (x+w, y+h),
+                              detector.get_rgb_tuple(),
+                              2)
 
         if self._save_frame and self._outfile is not None:
             self._do_save_frame(frame)
 
         return HomeCamDetectionData(frame=frame,
-                                    cascade_status=cascade_status,
+                                    detector_status=detector_status,
                                     rectangles=rectangles)
 
     def enable_frame_saving(self):

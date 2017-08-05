@@ -79,18 +79,26 @@ The file is commented with descriptions of each config option.
 The configuration is divided into the below three sections:
 
 - recording
-- detection
+- detectors (one section for each detector, see below for more info)
 - action (one section for each action, see below for more info)
 
 The recording section has options related to recording of the
 captured video stream. Recording is optional and can be enabled/disabled
 by setting the ``enable`` option to an appropriate value.
 
-The detection sections has options directly related to the OpenCV Haar-detection
+Detectors
++++++++++
+
+The detector sections have options directly related to the OpenCV Haar-detection
 algorithm. See the OpenCV documentation for more details:
 
 http://docs.opencv.org/2.4/modules/objdetect/doc/cascade_classification.html
 http://docs.opencv.org/trunk/d7/d8b/tutorial_py_face_detection.html
+
+Each detector is associated with one specific cascade file.
+
+The detector sections are defined with the tag ``detector%d`` (*%d* is
+a number starting from 0).
 
 Actions
 +++++++
@@ -106,27 +114,28 @@ a number starting from 0).
 Each action section will set the below options for the particular action:
 
 - command
-- cascades
+- detectors
 - triggers
 - save_frame
 
 The *command* option is the path to the script that is going to be launched.
 
-The *cascades* option is a comma separated list of cascade files for the
-action. The action will only be invoked if one of the cascades in the list
-was used in the detection. The list is a list of regular expressions.
+The *detectors* option is a comma separated list of detectors for the
+action. The action will only be invoked if one of the detectors in the list
+was used in the detection.
 
 The *triggers* option is a comma separated list of triggers. Valid values are
 ``detect`` and ``no-detect``. ``no-detect`` means that the action will be
 invoked when there is a transition from detection to no detection for any
-of the associated cascades. If the list ``detect,no-detect`` is used, the
+of the associated detectors. If the list ``detect,no-detect`` is used, the
 action will be invoked for both detections and transitions from detection
 to no detection.
 
-If no *cascades* or triggers options are present in the config file, default
-values will be used. The default cascades option is the string ``.*``, i.e.,
-detections by all cascades will yield an action invocation (provided that the
-*triggers* criterion is met). The default trigger option is ``detect``
+If no *triggers* option is present in the config file, a default
+value will be used. The default trigger option is ``detect``
+
+If no *detectors* are specified, the action will never be invoked (it must
+be associated with a detector).
 
 The *save_frame* option will make opencv-home-cam save the frame that caused
 the launch of the action script into a temporary file. The path to the
@@ -144,14 +153,14 @@ variables. They are listed below:
   the epoch.
 - **TIME_STAMP_DATE**: A human readable string of the time stamp in the
   following format: YYYY-MM-DD HH:MM:SS
-- **CASCADE**: The cascade file that trigged the action invocation.
+- **DETECTOR**: The detector that trigged the action invocation.
 - **IMAGE_PATH**: The path to a jpg file containing the frame that caused
   the action to be invoked.
 
 If the action is associated with several cascades, the action script might
-be launch several time for each cascade that has yielded an object detection.
-In this case, the **CASCADE** environment variable will of course be set to
-the name of the particular cascade that is associated with the action invocation.
+be launch several time for each detector that has yielded an object detection.
+In this case, the **DETECTOR** environment variable will of course be set to
+the name of the particular detector that is associated with the action invocation.
 
 Logging
 +++++++

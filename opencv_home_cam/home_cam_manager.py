@@ -11,6 +11,8 @@ from collections import namedtuple
 import re
 import tempfile
 from opencv_home_cam import HomeCam, HomeCamException, HomeCamConfig
+from .detector import Detector
+from .haar_cascade_detector import HaarCascadeDetector, HaarCascadeDetectorConfig
 
 
 def cast_string_to_float(s):
@@ -49,7 +51,7 @@ def cast_string_to_tuple(s):
 
 ActionConfig = namedtuple('ActionConfig',
                           ['command',
-                           'cascade_regexes',
+                           'detectors',
                            'trigger_detection',
                            'trigger_no_detection',
                            'save_frame',
@@ -67,36 +69,30 @@ class HomeCamManager:
     def __init__(self, config_file):
 
         self._logger = logging.getLogger(__name__)
-        self._set_default_config()
 
         self._cp = configparser.ConfigParser()
         self._cp.read(config_file)
 
         if 'recording' in self._cp:
             self._read_recording_config()
-        if 'detection' in self._cp:
-            self._read_detection_config()
 
+        self._read_detectors()
         self._read_actions()
 
-        self._hc = HomeCam(config=self._hc_config)
+        self._hc = HomeCam(config=self._hc_config, detectors=self._detectors)
 
         self._running = False
-        self._latest_cascade_status = None
+        self._latest_detector_status = None
 
-    def _set_default_config(self):
+    def _create_default_recording_config(self):
 
-        self._hc_config = HomeCamConfig(recording_cam_id=0,
-                                        recording_fps=20.0,
-                                        recording_file_limit=10,
-                                        recording_time_limit=60,
-                                        detection_scale_factor=1.1,
-                                        detection_min_neighbours=3,
-                                        detection_size=3,
-                                        detection_cascade_files=[],
-                                        recording_enable=False,
-                                        recording_dir=None,
-                                        recording_file_base=None)
+        return HomeCamConfig(recording_cam_id=0,
+                             recording_fps=20.0,
+                             recording_file_limit=10,
+                             recording_time_limit=60,
+                             recording_enable=False,
+                             recording_dir=None,
+                             recording_file_base=None)
 
     def _read_actions(self):
 
@@ -114,9 +110,30 @@ class HomeCamManager:
 
             action_nbr += 1
 
+    def _read_detectors(self):
+
+        detector_nbr = 0
+        self._detectors = []
+
+        while True:
+            detector_section = 'detector' + str(detector_nbr)
+            if detector_section not in self._cp:
+                break
+
+            detector_cfg = self._read_detector_config(detector_section)
+            if detector_cfg is None:
+                break
+
+            detector = HaarCascadeDetector(name=detector_section, config=detector_cfg)
+            self._detectors.append(detector)
+
+            detector_nbr += 1
+
     def _read_recording_config(self):
 
         rec_cfg = self._cp['recording']
+
+        self._hc_config = self._create_default_recording_config()
 
         if 'fps' in rec_cfg:
             self._hc_config = self._hc_config._replace(recording_fps=cast_string_to_float(rec_cfg['fps']))
@@ -167,39 +184,46 @@ class HomeCamManager:
         elif self._hc_config.recording_enable is not None:
             raise HomeCamManagerException("Config: Missing recording_file_base value!")
 
-    def _read_detection_config(self):
+    def _read_detector_config(self, detector_section):
 
-        detection_cfg = self._cp['detection']
+        detection_cfg = self._cp[detector_section]
 
-        if 'cascades' in detection_cfg:
-            cascades_str = detection_cfg['cascades']
-            if cascades_str is None:
-                raise HomeCamManagerException("Config: bad cascades!")
-            cascades_str_a = cascades_str.split(",")
-            self._hc_config = self._hc_config._replace(detection_cascade_files=cascades_str_a)
+        if 'cascade' in detection_cfg:
+            cascade_str = detection_cfg['cascade']
+            if cascade_str is None:
+                raise HomeCamManagerException("Config: bad cascade!")
         else:
-            raise HomeCamManagerException("Config: Missing cascade files!")
+            raise HomeCamManagerException("Config: Missing cascade file!")
 
         if 'scale_factor' in detection_cfg:
-            self._hc_config = self._hc_config._replace(detection_scale_factor=cast_string_to_float(detection_cfg['scale_factor']))
-            if self._hc_config.detection_scale_factor is None:
+            scale_factor = cast_string_to_float(detection_cfg['scale_factor'])
+            if scale_factor is None:
                 raise HomeCamManagerException("Config: bad scale_factor value!")
         else:
+            scale_factor = 1.1
             self._logger.info("Config: Missing scale_factor value, using default")
 
         if 'min_neighbours' in detection_cfg:
-            self._hc_config = self._hc_config._replace(detection_min_neighbours=cast_string_to_int(detection_cfg['min_neighbours']))
-            if self._hc_config.detection_min_neighbours is None:
+            min_neighbours = cast_string_to_int(detection_cfg['min_neighbours'])
+            if min_neighbours is None:
                 raise HomeCamManagerException("Config: bad min_neighbours value!")
         else:
+            min_neighbours = 3
             self._logger.info("Config: Missing min_neighbours value, using default")
 
         if 'size' in detection_cfg:
-            self._hc_config = self._hc_config._replace(detection_size=cast_string_to_int(detection_cfg['size']))
-            if self._hc_config.detection_size is None:
+            min_size = cast_string_to_int(detection_cfg['size'])
+            if min_size is None:
                 raise HomeCamManagerException("Config: bad size value!")
         else:
+            min_size = 3
             self._logger.info("Config: Missing size value, using default")
+
+        detector_config = HaarCascadeDetectorConfig(scale_factor=scale_factor,
+                                                    min_neighbours=min_neighbours,
+                                                    min_size=min_size,
+                                                    cascade_file=cascade_str)
+        return detector_config
 
     def _read_action_config(self, action_section):
 
@@ -212,19 +236,20 @@ class HomeCamManager:
         else:
             raise HomeCamManagerException("Missing command for section {}!".format(action_section))
 
-        if 'cascades' in action_cfg:
-            cascades_str = action_cfg['cascades']
-            if cascades_str is None:
-                raise HomeCamManagerException("Config: bad cascades!")
-            cascades_str_a = cascades_str.split(",")
-            cascade_regexes = []
-            for cascade in cascades_str_a:
-                cur_regex = re.compile(cascade.strip())
-                cascade_regexes.append(cur_regex)
+        detectors = []
+        if 'detectors' in action_cfg:
+            detectors_str = action_cfg['detectors']
+            if detectors_str is None:
+                raise HomeCamManagerException("Config: bad detectors!")
+            detectors_str_a = detectors_str.split(",")
+            for detector in detectors_str_a:
+                # Make sure the detector exists in the config file
+                if detector not in self._cp:
+                    raise HomeCamManagerException("Config: {}: Missing section for detector {} in config file!".format(action_section, detector))
+                detectors.append(detector)
         else:
-            self._logger.info("Missing cascades for section {}".format(action_section))
-            self._logger.info("Action will be invoked for all cascades.")
-            cascade_regexes = [re.compile('.*')]
+            self._logger.info("Missing detectors for {}".format(action_section))
+            self._logger.info("Action will be invoked for all detectors.")
 
         if 'triggers' in action_cfg:
             triggers_str = action_cfg['triggers']
@@ -271,7 +296,7 @@ class HomeCamManager:
             self._logger.info("Using default dir: {}".format(save_frame_dir))
 
         action_config = ActionConfig(command=command,
-                                     cascade_regexes=cascade_regexes,
+                                     detectors=detectors,
                                      trigger_detection=trigger_detection,
                                      trigger_no_detection=trigger_no_detection,
                                      save_frame=save_frame,
@@ -300,31 +325,31 @@ class HomeCamManager:
 
             detection_data = self._hc.read_and_process_frame()
 
-            if self._latest_cascade_status is None:
-                # Special case: Initially we don't have any saved cascade
-                # status, so we use the cascades from first processed frames
+            if self._latest_detector_status is None:
+                # Special case: Initially we don't have any saved detector
+                # status, so we use the detectors from first processed frames
                 # for initialization.
-                self._latest_cascade_status = {}
-                for cascade_file in detection_data.cascade_status:
-                    self._latest_cascade_status[cascade_file] = False
+                self._latest_detector_status = {}
+                for detector_name in detection_data.detector_status:
+                    self._latest_detector_status[detector_name] = False
 
-            for cascade_file, status in detection_data.cascade_status.items():
-                if status != self._latest_cascade_status[cascade_file]:
-                    # The detection status of the current cascade has changed
+            for detector_name, status in detection_data.detector_status.items():
+                if status != self._latest_detector_status[detector_name]:
+                    # The detection status of the current detector has changed
                     if status:
-                        self._logger.info("Cascade: {} has detected (an) object(s)".format(cascade_file))
+                        self._logger.info("Detector: {} has detected (an) object(s)".format(detector_name))
                         self._logger.info("  Rectangles:")
-                        for rectangle in detection_data.rectangles[cascade_file]:
+                        for rectangle in detection_data.rectangles[detector_name]:
                             self._logger.info("    {}".format(rectangle))
                     else:
-                        self._logger.info("Cascade: {} no longer detects any object(s)".format(cascade_file))
+                        self._logger.info("Detector: {} no longer detects any object(s)".format(detector_name))
 
-                    self._invoke_action(status, cascade_file, detection_data.frame)
+                    self._invoke_action(status, detector_name, detection_data.frame)
 
-            self._latest_cascade_status = detection_data.cascade_status
+            self._latest_detector_status = detection_data.detector_status
 
             object_detected_new = False
-            for status in self._latest_cascade_status:
+            for status in self._latest_detector_status:
                 if status:
                     object_detected_new = True
                     break
@@ -338,14 +363,13 @@ class HomeCamManager:
 
         self._hc.close()
 
-    def _invoke_action(self, detection, cascade, frame):
+    def _invoke_action(self, detection, detector_name, frame):
 
         for action in self._actions:
             if ((action.trigger_detection and detection) or
                 (action.trigger_no_detection and not detection)):
-                for cascade_regex in action.cascade_regexes:
-                    match = cascade_regex.match(cascade)
-                    if match:
+                for action_detector in action.detectors:
+                    if action_detector == detector_name:
                         if action.save_frame:
                             # Create a temporary file for the current frame
                             image = tempfile.NamedTemporaryFile(suffix='.jpg',
@@ -357,7 +381,7 @@ class HomeCamManager:
                             image_path = "No image"
                         # It is time to invoke the action script
                         self._invoke_action_command(detection,
-                                                    cascade,
+                                                    detector_name,
                                                     action.command,
                                                     image_path)
                         if action.save_frame:
@@ -365,7 +389,7 @@ class HomeCamManager:
                             image.close()
                         break
 
-    def _invoke_action_command(self, detection, cascade, command, image_path):
+    def _invoke_action_command(self, detection, detector_name, command, image_path):
 
         # Setup environment variables that will be passed to the child
         # (action command)
@@ -374,7 +398,7 @@ class HomeCamManager:
 
         os.environ["TIME_STAMP_RAW"] = str(ts_raw)
         os.environ["TIME_STAMP_DATE"] = ts_date
-        os.environ["CASCADE"] = cascade
+        os.environ["DETECTOR"] = detector_name
         if detection:
             os.environ["TRIGGER"] = "detect"
         else:

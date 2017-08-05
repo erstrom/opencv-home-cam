@@ -23,7 +23,7 @@ Detection data:
 
 Action timestamp raw: $TIME_STAMP_RAW
 Action timestamp: $TIME_STAMP_DATE
-Action cascade: $CASCADE
+Action detector: $DETECTOR
 Action trigger: $TRIGGER
 EOF
 

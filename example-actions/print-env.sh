@@ -5,5 +5,5 @@
 
 echo "Action timestamp raw: $TIME_STAMP_RAW"
 echo "Action timestamp: $TIME_STAMP_DATE"
-echo "Action cascade: $CASCADE"
+echo "Action detector: $DETECTOR"
 echo "Action trigger: $TRIGGER"
