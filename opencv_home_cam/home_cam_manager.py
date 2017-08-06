@@ -1,18 +1,14 @@
-import cv2
 import threading
 import logging
 import configparser
 import time
 import ast
-import os
-import datetime
-import subprocess
 from collections import namedtuple
 import re
-import tempfile
 from opencv_home_cam import HomeCam, HomeCamException, HomeCamConfig
 from .detector import Detector
 from .haar_cascade_detector import HaarCascadeDetector, HaarCascadeDetectorConfig
+from .action import Action, ActionConfig
 
 
 def cast_string_to_float(s):
@@ -47,16 +43,6 @@ def cast_string_to_tuple(s):
         return ast.literal_eval(s)
     except ValueError:
         return None
-
-
-ActionConfig = namedtuple('ActionConfig',
-                          ['command',
-                           'detectors',
-                           'trigger_detection',
-                           'trigger_no_detection',
-                           'save_frame',
-                           'save_frame_dir'],
-                          verbose=False)
 
 
 class HomeCamManagerException(Exception):
@@ -104,9 +90,12 @@ class HomeCamManager:
             if action_section not in self._cp:
                 break
 
-            action = self._read_action_config(action_section)
-            if action is not None:
-                self._actions.append(action)
+            action_cfg = self._read_action_config(action_section)
+            if action_cfg is None:
+                break
+
+            action = Action(config=action_cfg)
+            self._actions.append(action)
 
             action_nbr += 1
 
@@ -344,7 +333,8 @@ class HomeCamManager:
                     else:
                         self._logger.info("Detector: {} no longer detects any object(s)".format(detector_name))
 
-                    self._invoke_action(status, detector_name, detection_data.frame)
+                    for action in self._actions:
+                        action.invoke(status, detector_name, detection_data.frame)
 
             self._latest_detector_status = detection_data.detector_status
 
@@ -362,50 +352,3 @@ class HomeCamManager:
             time.sleep(1 / self._hc_config.recording_fps)
 
         self._hc.close()
-
-    def _invoke_action(self, detection, detector_name, frame):
-
-        for action in self._actions:
-            if ((action.trigger_detection and detection) or
-                (action.trigger_no_detection and not detection)):
-                for action_detector in action.detectors:
-                    if action_detector == detector_name:
-                        if action.save_frame:
-                            # Create a temporary file for the current frame
-                            image = tempfile.NamedTemporaryFile(suffix='.jpg',
-                                                                prefix='opencv-home-cam-',
-                                                                dir=action.save_frame_dir)
-                            image_path = image.name
-                            cv2.imwrite(image_path, frame)
-                        else:
-                            image_path = "No image"
-                        # It is time to invoke the action script
-                        self._invoke_action_command(detection,
-                                                    detector_name,
-                                                    action.command,
-                                                    image_path)
-                        if action.save_frame:
-                            # Remove the temporary file.
-                            image.close()
-                        break
-
-    def _invoke_action_command(self, detection, detector_name, command, image_path):
-
-        # Setup environment variables that will be passed to the child
-        # (action command)
-        ts_raw = time.time()
-        ts_date = datetime.datetime.fromtimestamp(ts_raw).strftime('%Y-%m-%d %H:%M:%S')
-
-        os.environ["TIME_STAMP_RAW"] = str(ts_raw)
-        os.environ["TIME_STAMP_DATE"] = ts_date
-        os.environ["DETECTOR"] = detector_name
-        if detection:
-            os.environ["TRIGGER"] = "detect"
-        else:
-            os.environ["TRIGGER"] = "no-detect"
-        os.environ["IMAGE_PATH"] = image_path
-
-        # Launch command and wait for it to complete.
-        res = subprocess.run(command)
-        if res.returncode != 0:
-            self._logger.warning("Command {} returned non-zero exitcode ({})".format(command, res.returncode))
