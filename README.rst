@@ -76,18 +76,48 @@ An example configuration file can be found in the *example-configs* directory
 
 The file is commented with descriptions of each config option.
 
-The configuration is divided into the below three sections:
+The configuration is divided into subsections with one subsection for each
+component. The components are:
 
-- recording
-- detectors (one section for each detector, see below for more info)
-- action (one section for each action, see below for more info)
+- cameras
+- recorders
+- detectors
+- actions
 
-The recording section has options related to recording of the
-captured video stream. Recording is optional and can be enabled/disabled
-by setting the ``enable`` option to an appropriate value.
+Cameras
+_______
+
+Each camera has its own section with the below options:
+
+- id:  The camera ID that will be used by OpenCV to open the camera device.
+  On systems with only one camera (built-in camera in laptops etc.) the
+  ID is usually 0.
+- fps:  The capture rate in frames per second.
+  This is how often images will be read from the input device.
+  If the value exceeds the maximum fps supported by the recording
+  device, the fps will be clamped to the maximum supported value.
+- recorder:  An (optional) recorder associated with the camera
+
+The current version of opencv-home-cam only supports one camera!
+
+The camera sections are defined with the tag ``camera%d`` (*%d* is
+a number starting from 0).
+
+Recorders
+_________
+
+Recorders are used to record the captured frames from cameras.
+A recorder must be connected to a camera (by setting the ``recorders``
+option of the camera to an appropriate value) in order to be operational.
+
+The recorder sections have options related to recording of the
+captured video stream.
+
+The recorder sections are defined with the tag ``recorder%d`` (*%d* is
+a number starting from 0).
 
 Detectors
-+++++++++
+_________
 
 The detector sections have options directly related to the OpenCV Haar-detection
 algorithm. See the OpenCV documentation for more details:
@@ -101,7 +131,7 @@ The detector sections are defined with the tag ``detector%d`` (*%d* is
 a number starting from 0).
 
 Actions
-+++++++
+_______
 
 Actions are external programs or scripts that will be invoked by
 opencv-home-cam when the associated launch criterion is met (usually a

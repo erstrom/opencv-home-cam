@@ -5,7 +5,9 @@ import time
 import ast
 from collections import namedtuple
 import re
-from opencv_home_cam import HomeCam, HomeCamException, HomeCamConfig
+from opencv_home_cam import HomeCam, HomeCamException, HomeCamDetectionData
+from .camera import Camera, CameraConfig, CameraException
+from .recorder import Recorder, RecorderConfig
 from .detector import Detector
 from .haar_cascade_detector import HaarCascadeDetector, HaarCascadeDetectorConfig
 from .action import Action, ActionConfig
@@ -59,26 +61,75 @@ class HomeCamManager:
         self._cp = configparser.ConfigParser()
         self._cp.read(config_file)
 
-        if 'recording' in self._cp:
-            self._read_recording_config()
-
+        self._read_cameras()
+        self._read_recorders()
         self._read_detectors()
         self._read_actions()
 
-        self._hc = HomeCam(config=self._hc_config, detectors=self._detectors)
+        if len(self._cameras) == 0:
+            # We need at least one camera!
+            raise HomeCamManagerException("No cameras specified. Add at least one camera section")
 
+        # Currently, only one camera is supported.
+        camera_cfg = self._cameras[0]
+        camera = Camera(camera_cfg.cam_id)
+        # Get the resolution of the camera. We must use the same resolution
+        # for the recorder
+        camera_resolution = camera.get_resolution()
+
+        # Find the recorder associated with the camera (if any) and create
+        # a recorder object.
+        if camera_cfg.recorder in self._recorders:
+            recorder_cfg = self._recorders[camera_cfg.recorder]
+            recorder = Recorder(config=recorder_cfg,
+                                fps=camera_cfg.fps,
+                                resolution=camera_resolution)
+        else:
+            recorder = None
+
+        self._hc = HomeCam(camera=camera,
+                           detectors=self._detectors,
+                           recorder=recorder)
+
+        self._fps = camera_cfg.fps
         self._running = False
         self._latest_detector_status = None
 
-    def _create_default_recording_config(self):
+    def _read_cameras(self):
 
-        return HomeCamConfig(recording_cam_id=0,
-                             recording_fps=20.0,
-                             recording_file_limit=10,
-                             recording_time_limit=60,
-                             recording_enable=False,
-                             recording_dir=None,
-                             recording_file_base=None)
+        camera_nbr = 0
+        self._cameras = []
+
+        while True:
+            camera_section = 'camera' + str(camera_nbr)
+            if camera_section not in self._cp:
+                break
+
+            camera_cfg = self._read_camera_config(camera_section)
+            if camera_cfg is None:
+                break
+
+            self._cameras.append(camera_cfg)
+
+            camera_nbr += 1
+
+    def _read_recorders(self):
+
+        recorder_nbr = 0
+        self._recorders = {}
+
+        while True:
+            recorder_section = 'recorder' + str(recorder_nbr)
+            if recorder_section not in self._cp:
+                break
+
+            recorder_cfg = self._read_recorder_config(recorder_section)
+            if recorder_cfg is None:
+                break
+
+            self._recorders[recorder_section] = recorder_cfg
+
+            recorder_nbr += 1
 
     def _read_actions(self):
 
@@ -118,60 +169,80 @@ class HomeCamManager:
 
             detector_nbr += 1
 
-    def _read_recording_config(self):
+    def _read_recorder_config(self, recorder_section):
 
-        rec_cfg = self._cp['recording']
-
-        self._hc_config = self._create_default_recording_config()
-
-        if 'fps' in rec_cfg:
-            self._hc_config = self._hc_config._replace(recording_fps=cast_string_to_float(rec_cfg['fps']))
-            if self._hc_config.recording_fps is None:
-                raise HomeCamManagerException("Config: bad fps value!")
-        else:
-            self._logger.info("Config: Missing fps value, using default")
+        rec_cfg = self._cp[recorder_section]
 
         if 'file_limit' in rec_cfg:
-            self._hc_config = self._hc_config._replace(recording_file_limit=cast_string_to_int(rec_cfg['file_limit']))
-            if self._hc_config.recording_file_limit is None:
+            file_limit = cast_string_to_int(rec_cfg['file_limit'])
+            if file_limit is None:
                 raise HomeCamManagerException("Config: bad file_limit value!")
         else:
+            file_limit = 10
             self._logger.info("Config: Missing file_limit value, using default")
 
         if 'time_limit' in rec_cfg:
-            self._hc_config = self._hc_config._replace(recording_time_limit=cast_string_to_int(rec_cfg['time_limit']))
-            if self._hc_config.recording_time_limit is None:
+            time_limit = cast_string_to_int(rec_cfg['time_limit'])
+            if time_limit is None:
                 raise HomeCamManagerException("Config: bad time_limit value!")
         else:
+            time_limit = 60
             self._logger.info("Config: Missing time_limit value, using default")
 
-        if 'cam_id' in rec_cfg:
-            self._hc_config = self._hc_config._replace(recording_cam_id=cast_string_to_int(rec_cfg['cam_id']))
-            if self._hc_config.recording_cam_id is None:
-                raise HomeCamManagerException("Config: bad cam_id value!")
-        else:
-            self._logger.info("Config: Missing cam_id value, using default")
-
-        if 'enable' in rec_cfg:
-            self._hc_config = self._hc_config._replace(recording_enable=cast_string_to_bool(rec_cfg['enable']))
-            if self._hc_config.recording_enable is None:
-                raise HomeCamManagerException("Config: Bad output enable option!")
-        else:
-            self._logger.info("Config: Missing enable value, using default")
-
         if 'recording_dir' in rec_cfg:
-            self._hc_config = self._hc_config._replace(recording_dir=rec_cfg['recording_dir'])
-            if self._hc_config.recording_dir is None:
+            recording_dir = rec_cfg['recording_dir']
+            if recording_dir is None:
                 raise HomeCamManagerException("Config: Bad output directory path!")
-        elif self._hc_config.recording_enable is not None:
+        else:
             raise HomeCamManagerException("Config: Missing recording_dir value!")
 
         if 'recording_file_base' in rec_cfg:
-            self._hc_config = self._hc_config._replace(recording_file_base=rec_cfg['recording_file_base'])
-            if self._hc_config.recording_file_base is None:
+            recording_file_base = rec_cfg['recording_file_base']
+            if recording_file_base is None:
                 raise HomeCamManagerException("Config: Bad output file base!")
-        elif self._hc_config.recording_enable is not None:
+        else:
             raise HomeCamManagerException("Config: Missing recording_file_base value!")
+
+        recorder_config = RecorderConfig(file_limit=file_limit,
+                                         time_limit=time_limit,
+                                         directory=recording_dir,
+                                         file_base=recording_file_base)
+        return recorder_config
+
+    def _read_camera_config(self, camera_section):
+
+        camera_cfg = self._cp[camera_section]
+
+        if 'id' in camera_cfg:
+            cam_id = camera_cfg['id']
+            if cam_id is None:
+                raise HomeCamManagerException("Config: bad cam_id value!")
+        else:
+            cam_id = 0
+            self._logger.info("Config: Missing cam_id value, using default")
+
+        if 'fps' in camera_cfg:
+            fps = cast_string_to_float(camera_cfg['fps'])
+            if fps is None:
+                raise HomeCamManagerException("Config: bad fps value!")
+        else:
+            fps = 20.0
+            self._logger.info("Config: Missing fps value, using default")
+
+        if 'recorder' in camera_cfg:
+            recorder = camera_cfg['recorder']
+            if recorder is None:
+                raise HomeCamManagerException("Config: bad recorder!")
+            if recorder not in self._cp:
+                raise HomeCamManagerException("Config: {}: Missing section for {} in config file!".format(camera_section, recorder))
+        else:
+            recorder = None
+            self._logger.info("Config: No recorders for {}".format(camera_section))
+
+        camera_config = CameraConfig(cam_id=cam_id,
+                                     fps=fps,
+                                     recorder=recorder)
+        return camera_config
 
     def _read_detector_config(self, detector_section):
 
@@ -349,6 +420,6 @@ class HomeCamManager:
 
             object_detected = object_detected_new
 
-            time.sleep(1 / self._hc_config.recording_fps)
+            time.sleep(1 / self._fps)
 
         self._hc.close()
