@@ -443,7 +443,11 @@ class OpenCvHomeCam:
                     break
 
             if object_detected_new and not object_detected:
+                self._logger.info("Enable frame saving")
                 self._cam_controller.enable_frame_saving()
+            elif not object_detected_new and object_detected:
+                self._logger.info("Disable frame saving")
+                self._cam_controller.disable_frame_saving()
 
             object_detected = object_detected_new
 
