@@ -16,32 +16,32 @@ from .recorder import Recorder
 # rectangles     - A dict of (x, y, width, height) tuples forming a rectangle
 #                  of each match in the current frame. The current detector
 #                  name is the dict key.
-HomeCamDetectionData = namedtuple('HomeCamDetectionData',
-                                  ['frame',
-                                   'detector_status',
-                                   'rectangles'],
-                                  verbose=False)
+DetectionData = namedtuple('DetectionData',
+                           ['frame',
+                            'detector_status',
+                            'rectangles'],
+                           verbose=False)
 
 
-class HomeCamException(Exception):
+class CamControllerException(Exception):
 
     pass
 
 
-class HomeCam:
+class CamController:
 
     def __init__(self, camera, detectors, recorder):
 
         self._logger = logging.getLogger(__name__)
 
         if camera is None:
-            raise HomeCamException("Missing camera")
+            raise CamControllerException("Missing camera")
 
         if recorder is None:
-            raise HomeCamException("Missing recorder")
+            raise CamControllerException("Missing recorder")
 
         if detectors is None:
-            raise HomeCamException("Missing detector(s)")
+            raise CamControllerException("Missing detector(s)")
 
         self._camera = camera
         self._recorder = recorder
@@ -49,7 +49,7 @@ class HomeCam:
         self._save_frame = False
 
     # Read one frame from the cam and process it.
-    # Returns a HomeCamDetectionData named tuple containing all detection
+    # Returns a DetectionData named tuple containing all detection
     # data.
     def read_and_process_frame(self):
 
@@ -63,9 +63,9 @@ class HomeCam:
         # Capture frame
         frame = self._camera.capture_frame()
         if frame is None:
-            return HomeCamDetectionData(frame=None,
-                                        detector_status=detector_status,
-                                        rectangles=rectangles)
+            return DetectionData(frame=None,
+                                 detector_status=detector_status,
+                                 rectangles=rectangles)
 
         frame_gs = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
@@ -88,9 +88,9 @@ class HomeCam:
         if self._save_frame and self._recorder is not None:
             self._recorder.record_frame(frame)
 
-        return HomeCamDetectionData(frame=frame,
-                                    detector_status=detector_status,
-                                    rectangles=rectangles)
+        return DetectionData(frame=frame,
+                             detector_status=detector_status,
+                             rectangles=rectangles)
 
     def enable_frame_saving(self):
 

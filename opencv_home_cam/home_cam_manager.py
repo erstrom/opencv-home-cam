@@ -5,7 +5,7 @@ import time
 import ast
 from collections import namedtuple
 import re
-from opencv_home_cam import HomeCam, HomeCamException, HomeCamDetectionData
+from opencv_home_cam import CamController, CamControllerException, DetectionData
 from .camera import Camera, CameraConfig, CameraException
 from .recorder import Recorder, RecorderConfig
 from .detector import Detector
@@ -96,9 +96,9 @@ class HomeCamManager:
                                            config=detector_cfg)
             detectors.append(detector)
 
-        self._hc = HomeCam(camera=camera,
-                           detectors=detectors,
-                           recorder=recorder)
+        self._cam_controller = CamController(camera=camera,
+                                             detectors=detectors,
+                                             recorder=recorder)
 
         self._fps = camera_cfg.fps
         self._running = False
@@ -407,7 +407,7 @@ class HomeCamManager:
 
         while self._running:
 
-            detection_data = self._hc.read_and_process_frame()
+            detection_data = self._cam_controller.read_and_process_frame()
 
             if self._latest_detector_status is None:
                 # Special case: Initially we don't have any saved detector
@@ -440,10 +440,10 @@ class HomeCamManager:
                     break
 
             if object_detected_new and not object_detected:
-                self._hc.enable_frame_saving()
+                self._cam_controller.enable_frame_saving()
 
             object_detected = object_detected_new
 
             time.sleep(1 / self._fps)
 
-        self._hc.close()
+        self._cam_controller.close()
