@@ -97,6 +97,7 @@ Each camera has its own section with the below options:
   If the value exceeds the maximum fps supported by the recording
   device, the fps will be clamped to the maximum supported value.
 - recorder:  An (optional) recorder associated with the camera
+- detectors:  A comma separated list of detectors for this camera.
 
 The current version of opencv-home-cam only supports one camera!
 
@@ -126,6 +127,10 @@ http://docs.opencv.org/2.4/modules/objdetect/doc/cascade_classification.html
 http://docs.opencv.org/trunk/d7/d8b/tutorial_py_face_detection.html
 
 Each detector is associated with one specific cascade file.
+
+A detector must be connected to a camera in order to become active. This is
+done by adding the detector to the comma-separated ``detectors``-list of
+the camera.
 
 The detector sections are defined with the tag ``detector%d`` (*%d* is
 a number starting from 0).

@@ -74,7 +74,7 @@ class HomeCamManager:
         camera_cfg = self._cameras[0]
         camera = Camera(camera_cfg.cam_id)
         # Get the resolution of the camera. We must use the same resolution
-        # for the recorder
+        # for the recorder.
         camera_resolution = camera.get_resolution()
 
         # Find the recorder associated with the camera (if any) and create
@@ -87,8 +87,17 @@ class HomeCamManager:
         else:
             recorder = None
 
+        # Find all detectors associated with the camera and create an
+        # array of detector objects.
+        detectors = []
+        for camera_detector in camera_cfg.detectors:
+            detector_cfg = self._detectors[camera_detector]
+            detector = HaarCascadeDetector(name=camera_detector,
+                                           config=detector_cfg)
+            detectors.append(detector)
+
         self._hc = HomeCam(camera=camera,
-                           detectors=self._detectors,
+                           detectors=detectors,
                            recorder=recorder)
 
         self._fps = camera_cfg.fps
@@ -153,7 +162,7 @@ class HomeCamManager:
     def _read_detectors(self):
 
         detector_nbr = 0
-        self._detectors = []
+        self._detectors = {}
 
         while True:
             detector_section = 'detector' + str(detector_nbr)
@@ -164,8 +173,7 @@ class HomeCamManager:
             if detector_cfg is None:
                 break
 
-            detector = HaarCascadeDetector(name=detector_section, config=detector_cfg)
-            self._detectors.append(detector)
+            self._detectors[detector_section] = detector_cfg
 
             detector_nbr += 1
 
@@ -239,9 +247,25 @@ class HomeCamManager:
             recorder = None
             self._logger.info("Config: No recorders for {}".format(camera_section))
 
+        detectors = []
+        if 'detectors' in camera_cfg:
+            detectors_str = camera_cfg['detectors']
+            if detectors_str is None:
+                raise HomeCamManagerException("Config: bad detectors!")
+            detectors_str_a = detectors_str.split(",")
+            for detector in detectors_str_a:
+                # Make sure the detector exists in the config file
+                if detector not in self._cp:
+                    raise HomeCamManagerException("Config: {}: Missing section for detector {} in config file!".format(camera_section, detector))
+                detectors.append(detector)
+        else:
+            self._logger.info("Missing detectors for {}".format(camera_section))
+            self._logger.info("No object detection will be performed for this camera.")
+
         camera_config = CameraConfig(cam_id=cam_id,
                                      fps=fps,
-                                     recorder=recorder)
+                                     recorder=recorder,
+                                     detectors=detectors)
         return camera_config
 
     def _read_detector_config(self, detector_section):

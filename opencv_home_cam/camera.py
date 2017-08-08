@@ -7,7 +7,8 @@ import imutils
 CameraConfig = namedtuple('CameraConfig',
                           ['cam_id',
                            'fps',
-                           'recorder'],
+                           'recorder',
+                           'detectors'],
                           verbose=False)
 
 
