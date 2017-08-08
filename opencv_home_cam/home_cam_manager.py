@@ -47,12 +47,12 @@ def cast_string_to_tuple(s):
         return None
 
 
-class HomeCamManagerException(Exception):
+class OpenCvHomeCamException(Exception):
 
     pass
 
 
-class HomeCamManager:
+class OpenCvHomeCam:
 
     def __init__(self, config_file):
 
@@ -68,7 +68,7 @@ class HomeCamManager:
 
         if len(self._cameras) == 0:
             # We need at least one camera!
-            raise HomeCamManagerException("No cameras specified. Add at least one camera section")
+            raise OpenCvHomeCamException("No cameras specified. Add at least one camera section")
 
         # Currently, only one camera is supported.
         camera_cfg = self._cameras[0]
@@ -101,7 +101,7 @@ class HomeCamManager:
                                                  detectors=detectors,
                                                  recorder=recorder)
         except CamControllerException as err:
-            raise HomeCamManagerException(err)
+            raise OpenCvHomeCamException(err)
 
         self._fps = camera_cfg.fps
         self._running = False
@@ -187,7 +187,7 @@ class HomeCamManager:
         if 'file_limit' in rec_cfg:
             file_limit = cast_string_to_int(rec_cfg['file_limit'])
             if file_limit is None:
-                raise HomeCamManagerException("Config: bad file_limit value!")
+                raise OpenCvHomeCamException("Config: bad file_limit value!")
         else:
             file_limit = 10
             self._logger.info("Config: Missing file_limit value, using default")
@@ -195,7 +195,7 @@ class HomeCamManager:
         if 'time_limit' in rec_cfg:
             time_limit = cast_string_to_int(rec_cfg['time_limit'])
             if time_limit is None:
-                raise HomeCamManagerException("Config: bad time_limit value!")
+                raise OpenCvHomeCamException("Config: bad time_limit value!")
         else:
             time_limit = 60
             self._logger.info("Config: Missing time_limit value, using default")
@@ -203,16 +203,16 @@ class HomeCamManager:
         if 'recording_dir' in rec_cfg:
             recording_dir = rec_cfg['recording_dir']
             if recording_dir is None:
-                raise HomeCamManagerException("Config: Bad output directory path!")
+                raise OpenCvHomeCamException("Config: Bad output directory path!")
         else:
-            raise HomeCamManagerException("Config: Missing recording_dir value!")
+            raise OpenCvHomeCamException("Config: Missing recording_dir value!")
 
         if 'recording_file_base' in rec_cfg:
             recording_file_base = rec_cfg['recording_file_base']
             if recording_file_base is None:
-                raise HomeCamManagerException("Config: Bad output file base!")
+                raise OpenCvHomeCamException("Config: Bad output file base!")
         else:
-            raise HomeCamManagerException("Config: Missing recording_file_base value!")
+            raise OpenCvHomeCamException("Config: Missing recording_file_base value!")
 
         recorder_config = RecorderConfig(file_limit=file_limit,
                                          time_limit=time_limit,
@@ -227,7 +227,7 @@ class HomeCamManager:
         if 'id' in camera_cfg:
             cam_id = camera_cfg['id']
             if cam_id is None:
-                raise HomeCamManagerException("Config: bad cam_id value!")
+                raise OpenCvHomeCamException("Config: bad cam_id value!")
         else:
             cam_id = 0
             self._logger.info("Config: Missing cam_id value, using default")
@@ -235,7 +235,7 @@ class HomeCamManager:
         if 'fps' in camera_cfg:
             fps = cast_string_to_float(camera_cfg['fps'])
             if fps is None:
-                raise HomeCamManagerException("Config: bad fps value!")
+                raise OpenCvHomeCamException("Config: bad fps value!")
         else:
             fps = 20.0
             self._logger.info("Config: Missing fps value, using default")
@@ -243,9 +243,9 @@ class HomeCamManager:
         if 'recorder' in camera_cfg:
             recorder = camera_cfg['recorder']
             if recorder is None:
-                raise HomeCamManagerException("Config: bad recorder!")
+                raise OpenCvHomeCamException("Config: bad recorder!")
             if recorder not in self._cp:
-                raise HomeCamManagerException("Config: {}: Missing section for {} in config file!".format(camera_section, recorder))
+                raise OpenCvHomeCamException("Config: {}: Missing section for {} in config file!".format(camera_section, recorder))
         else:
             recorder = None
             self._logger.info("Config: No recorders for {}".format(camera_section))
@@ -254,12 +254,12 @@ class HomeCamManager:
         if 'detectors' in camera_cfg:
             detectors_str = camera_cfg['detectors']
             if detectors_str is None:
-                raise HomeCamManagerException("Config: bad detectors!")
+                raise OpenCvHomeCamException("Config: bad detectors!")
             detectors_str_a = detectors_str.split(",")
             for detector in detectors_str_a:
                 # Make sure the detector exists in the config file
                 if detector not in self._cp:
-                    raise HomeCamManagerException("Config: {}: Missing section for detector {} in config file!".format(camera_section, detector))
+                    raise OpenCvHomeCamException("Config: {}: Missing section for detector {} in config file!".format(camera_section, detector))
                 detectors.append(detector)
         else:
             self._logger.info("Missing detectors for {}".format(camera_section))
@@ -278,14 +278,14 @@ class HomeCamManager:
         if 'cascade' in detection_cfg:
             cascade_str = detection_cfg['cascade']
             if cascade_str is None:
-                raise HomeCamManagerException("Config: bad cascade!")
+                raise OpenCvHomeCamException("Config: bad cascade!")
         else:
-            raise HomeCamManagerException("Config: Missing cascade file!")
+            raise OpenCvHomeCamException("Config: Missing cascade file!")
 
         if 'scale_factor' in detection_cfg:
             scale_factor = cast_string_to_float(detection_cfg['scale_factor'])
             if scale_factor is None:
-                raise HomeCamManagerException("Config: bad scale_factor value!")
+                raise OpenCvHomeCamException("Config: bad scale_factor value!")
         else:
             scale_factor = 1.1
             self._logger.info("Config: Missing scale_factor value, using default")
@@ -293,7 +293,7 @@ class HomeCamManager:
         if 'min_neighbours' in detection_cfg:
             min_neighbours = cast_string_to_int(detection_cfg['min_neighbours'])
             if min_neighbours is None:
-                raise HomeCamManagerException("Config: bad min_neighbours value!")
+                raise OpenCvHomeCamException("Config: bad min_neighbours value!")
         else:
             min_neighbours = 3
             self._logger.info("Config: Missing min_neighbours value, using default")
@@ -301,7 +301,7 @@ class HomeCamManager:
         if 'size' in detection_cfg:
             min_size = cast_string_to_int(detection_cfg['size'])
             if min_size is None:
-                raise HomeCamManagerException("Config: bad size value!")
+                raise OpenCvHomeCamException("Config: bad size value!")
         else:
             min_size = 3
             self._logger.info("Config: Missing size value, using default")
@@ -319,20 +319,20 @@ class HomeCamManager:
         if 'command' in action_cfg:
             command = action_cfg['command']
             if command is None:
-                raise HomeCamManagerException("Bad command for section {}!".format(action_section))
+                raise OpenCvHomeCamException("Bad command for section {}!".format(action_section))
         else:
-            raise HomeCamManagerException("Missing command for section {}!".format(action_section))
+            raise OpenCvHomeCamException("Missing command for section {}!".format(action_section))
 
         detectors = []
         if 'detectors' in action_cfg:
             detectors_str = action_cfg['detectors']
             if detectors_str is None:
-                raise HomeCamManagerException("Config: bad detectors!")
+                raise OpenCvHomeCamException("Config: bad detectors!")
             detectors_str_a = detectors_str.split(",")
             for detector in detectors_str_a:
                 # Make sure the detector exists in the config file
                 if detector not in self._cp:
-                    raise HomeCamManagerException("Config: {}: Missing section for detector {} in config file!".format(action_section, detector))
+                    raise OpenCvHomeCamException("Config: {}: Missing section for detector {} in config file!".format(action_section, detector))
                 detectors.append(detector)
         else:
             self._logger.info("Missing detectors for {}".format(action_section))
@@ -341,7 +341,7 @@ class HomeCamManager:
         if 'triggers' in action_cfg:
             triggers_str = action_cfg['triggers']
             if triggers_str is None:
-                raise HomeCamManagerException("Config: bad trigger!")
+                raise OpenCvHomeCamException("Config: bad trigger!")
             trigger_detection = False
             trigger_no_detection = False
             triggers = triggers_str.split(",")
@@ -367,7 +367,7 @@ class HomeCamManager:
         if 'save_frame' in action_cfg:
             save_frame = cast_string_to_bool(action_cfg['save_frame'])
             if save_frame is None:
-                raise HomeCamManagerException("Config: Bad save_frame option for section {}!".format(action_section))
+                raise OpenCvHomeCamException("Config: Bad save_frame option for section {}!".format(action_section))
         else:
             self._logger.info("Missing save_frame option for section {}".format(action_section))
             self._logger.info("Skipping detection frame saving")
@@ -376,7 +376,7 @@ class HomeCamManager:
         if 'save_frame_dir' in action_cfg:
             save_frame_dir = action_cfg['save_frame_dir']
             if save_frame_dir is None:
-                raise HomeCamManagerException("Config: Bad save_frame_dir option for section {}!".format(action_section))
+                raise OpenCvHomeCamException("Config: Bad save_frame_dir option for section {}!".format(action_section))
         else:
             save_frame_dir = "/tmp"
             self._logger.info("Missing save_frame_dir option for section {}".format(action_section))

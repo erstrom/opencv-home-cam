@@ -6,7 +6,7 @@ import cv2
 import signal
 import logging
 import logging.config
-from opencv_home_cam import HomeCamManager, HomeCamManagerException
+from opencv_home_cam import OpenCvHomeCam, OpenCvHomeCamException
 
 description = "OpenCV home cam. See README.rst for full documentation"
 
@@ -63,16 +63,16 @@ def main():
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)
 
-        hcm = HomeCamManager(config_file=parsed_args.config_file)
+        hcm = OpenCvHomeCam(config_file=parsed_args.config_file)
 
         hcm.start()
-        logger.info("Waiting for HomeCamManager to finish\n")
+        logger.info("Waiting for OpenCvHomeCam to finish\n")
         hcm.wait()
-        logger.info("HomeCamManager finished\n")
+        logger.info("OpenCvHomeCam finished\n")
 
     except IOError as err:
         sys.stderr.write('{}\n'.format(err))
-    except HomeCamManagerException as err:
+    except OpenCvHomeCamException as err:
         sys.stderr.write('{}\n'.format(err))
     except:
         traceback.print_exc()

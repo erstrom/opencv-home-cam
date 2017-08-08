@@ -1,2 +1,2 @@
-from .home_cam_manager import HomeCamManager
-from .home_cam_manager import HomeCamManagerException
+from .home_cam_manager import OpenCvHomeCam
+from .home_cam_manager import OpenCvHomeCamException
