@@ -6,7 +6,7 @@ import cv2
 import signal
 import logging
 import logging.config
-from opencv_home_cam import HomeCamManager, CamControllerException, HomeCamManagerException
+from opencv_home_cam import HomeCamManager, HomeCamManagerException
 
 description = "OpenCV home cam. See README.rst for full documentation"
 
@@ -71,8 +71,6 @@ def main():
         logger.info("HomeCamManager finished\n")
 
     except IOError as err:
-        sys.stderr.write('{}\n'.format(err))
-    except CamControllerException as err:
         sys.stderr.write('{}\n'.format(err))
     except HomeCamManagerException as err:
         sys.stderr.write('{}\n'.format(err))

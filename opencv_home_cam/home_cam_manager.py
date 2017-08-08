@@ -5,7 +5,7 @@ import time
 import ast
 from collections import namedtuple
 import re
-from opencv_home_cam import CamController, CamControllerException, DetectionData
+from .cam_controller import CamController, CamControllerException, DetectionData
 from .camera import Camera, CameraConfig, CameraException
 from .recorder import Recorder, RecorderConfig
 from .detector import Detector
@@ -96,9 +96,12 @@ class HomeCamManager:
                                            config=detector_cfg)
             detectors.append(detector)
 
-        self._cam_controller = CamController(camera=camera,
-                                             detectors=detectors,
-                                             recorder=recorder)
+        try:
+            self._cam_controller = CamController(camera=camera,
+                                                 detectors=detectors,
+                                                 recorder=recorder)
+        except CamControllerException as err:
+            raise HomeCamManagerException(err)
 
         self._fps = camera_cfg.fps
         self._running = False
