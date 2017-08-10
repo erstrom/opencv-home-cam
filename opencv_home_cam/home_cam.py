@@ -437,7 +437,7 @@ class OpenCvHomeCam:
             self._latest_detector_status = detection_data.detector_status
 
             object_detected_new = False
-            for status in self._latest_detector_status:
+            for detector_name, status in self._latest_detector_status.items():
                 if status:
                     object_detected_new = True
                     break
