@@ -120,13 +120,34 @@ a number starting from 0).
 Detectors
 _________
 
-The detector sections have options directly related to the OpenCV Haar-detection
-algorithm. See the OpenCV documentation for more details:
+Detectors are used to detect objects in frames captured by a camera.
+Different detectors can be used to detect different types of objects.
+
+Currently, only two types of detectors are supported:
+
+- Haar cascade
+- HOG people detector (HOG = Histogram of Oriented Gradients)
+
+The HOG people detector is used to detect pedestrians only, whereas the
+Haar cascade detector can be used to detect different types of objects
+depending on which cascade file is used.
+
+The detector type is selected with the ``detector_type`` option.
+
+The detection algorithms are parameterized and all parameters (the arguments
+to the openCV ``detectMultiscale`` functions) are added in the config file.
+
+The detection parameters are optional, default values will be used if they are
+not explicitly added in the config file. The only exception is the
+``cascade`` option that is mandatory for Haar cascade detectors (and not used
+at all for HOG detectors).
+
+A Haar detector must be associated with one specific cascade file.
+
+For more details about the Haar cascade detection, check out the below links:
 
 http://docs.opencv.org/2.4/modules/objdetect/doc/cascade_classification.html
 http://docs.opencv.org/trunk/d7/d8b/tutorial_py_face_detection.html
-
-Each detector is associated with one specific cascade file.
 
 A detector must be connected to a camera in order to become active. This is
 done by adding the detector to the comma-separated ``detectors``-list of

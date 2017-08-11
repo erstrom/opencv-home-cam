@@ -10,6 +10,7 @@ from .camera import Camera, CameraConfig, CameraException
 from .recorder import Recorder, RecorderConfig
 from .detector import Detector
 from .haar_cascade_detector import HaarCascadeDetector, HaarCascadeDetectorConfig
+from .hog_detector import HogPeopleDetector, HogPeopleDetectorConfig
 from .action import Action, ActionConfig
 
 
@@ -92,8 +93,16 @@ class OpenCvHomeCam:
         detectors = []
         for camera_detector in camera_cfg.detectors:
             detector_cfg = self._detectors[camera_detector]
-            detector = HaarCascadeDetector(name=camera_detector,
-                                           config=detector_cfg)
+            # Check what type of detector this is and create an object of
+            # the corresponding class.
+            if type(detector_cfg).__name__ == 'HaarCascadeDetectorConfig':
+                detector = HaarCascadeDetector(name=camera_detector,
+                                               config=detector_cfg)
+            elif type(detector_cfg).__name__ == 'HogPeopleDetectorConfig':
+                detector = HogPeopleDetector(name=camera_detector,
+                                             config=detector_cfg)
+            else:
+                raise OpenCvHomeCamException("Unknown detector type: {}".format(type(detector_cfg).__name__))
             detectors.append(detector)
 
         try:
@@ -275,6 +284,23 @@ class OpenCvHomeCam:
 
         detection_cfg = self._cp[detector_section]
 
+        if 'detector_type' in detection_cfg:
+            detector_type = detection_cfg['detector_type']
+            if detector_type is None:
+                raise OpenCvHomeCamException("Config: bad detector_type value!")
+            if (detector_type.lower() == 'haar'):
+                return self._read_haar_cascade_detector_config(detector_section)
+            elif (detector_type.lower() == 'hog-people'):
+                return self._read_hog_people_detector_config(detector_section)
+            else:
+                raise OpenCvHomeCamException("Config: invalid detector_type: {}!".format(detector_type))
+        else:
+            raise OpenCvHomeCamException("Config: Missing detector_type for {}!".format(detector_section))
+
+    def _read_haar_cascade_detector_config(self, detector_section):
+
+        detection_cfg = self._cp[detector_section]
+
         if 'cascade' in detection_cfg:
             cascade_str = detection_cfg['cascade']
             if cascade_str is None:
@@ -310,6 +336,39 @@ class OpenCvHomeCam:
                                                     min_neighbours=min_neighbours,
                                                     min_size=min_size,
                                                     cascade_file=cascade_str)
+        return detector_config
+
+    def _read_hog_people_detector_config(self, detector_section):
+
+        detection_cfg = self._cp[detector_section]
+
+        if 'scale_factor' in detection_cfg:
+            scale_factor = cast_string_to_float(detection_cfg['scale_factor'])
+            if scale_factor is None:
+                raise OpenCvHomeCamException("Config: bad scale_factor value!")
+        else:
+            scale_factor = 1.05
+            self._logger.info("Config: Missing scale_factor value, using default")
+
+        if 'padding' in detection_cfg:
+            padding = cast_string_to_tuple(detection_cfg['padding'])
+            if padding is None:
+                raise OpenCvHomeCamException("Config: bad padding value!")
+        else:
+            padding = (8, 8)
+            self._logger.info("Config: Missing padding value, using default")
+
+        if 'win_stride' in detection_cfg:
+            win_stride = cast_string_to_tuple(detection_cfg['win_stride'])
+            if win_stride is None:
+                raise OpenCvHomeCamException("Config: bad win_stride value!")
+        else:
+            win_stride = (4, 4)
+            self._logger.info("Config: Missing win_stride value, using default")
+
+        detector_config = HogPeopleDetectorConfig(scale_factor=scale_factor,
+                                                  win_stride=win_stride,
+                                                  padding=padding)
         return detector_config
 
     def _read_action_config(self, action_section):
