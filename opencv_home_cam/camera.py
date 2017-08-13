@@ -24,7 +24,7 @@ class Camera:
         self._logger = logging.getLogger(__name__)
 
         self._video_capture = cv2.VideoCapture(int(cam_id))
-        if self._video_capture is None:
+        if not self._video_capture.isOpened():
             raise CameraException("Unable to open camera")
 
         # Get the resolution of the capture device
