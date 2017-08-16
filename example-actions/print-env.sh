@@ -1,4 +1,4 @@
-#! /bin/bash
+#! /bin/sh
 #
 # Example action script for opencv-home-cam.
 # All env vars set up by opencv-home-cam are printed.

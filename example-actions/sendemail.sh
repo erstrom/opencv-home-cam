@@ -1,4 +1,4 @@
-#! /bin/bash
+#! /bin/sh
 #
 # Example action script for sending email notifications of detections
 # using the sendemail tool.
@@ -27,9 +27,9 @@ Action detector: $DETECTOR
 Action trigger: $TRIGGER
 EOF
 
-if [[ ! -z ${IMAGE_PATH+x} ]] && [[ "$IMAGE_PATH" != "No image" ]]; then
+if [ ! -z ${IMAGE_PATH+x} ] && [ "$IMAGE_PATH" != "No image" ]; then
 	# We should attach a jpg image with the email
-	if [[ ! -f $IMAGE_PATH ]] ; then
+	if [ ! -f $IMAGE_PATH ] ; then
 		echo "$IMAGE_PATH does not exist!"
 		exit 1
 	fi
