@@ -441,12 +441,21 @@ class OpenCvHomeCam:
             self._logger.info("Missing save_frame_dir option for section {}".format(action_section))
             self._logger.info("Using default dir: {}".format(save_frame_dir))
 
+        if 'cool_down_time' in action_cfg:
+            cool_down_time = cast_string_to_float(action_cfg['cool_down_time'])
+            if cool_down_time is None:
+                raise OpenCvHomeCamException("Config: bad cool_down_time value!")
+        else:
+            cool_down_time = 0.0
+            self._logger.info("Config: Missing cool_down_time value, using default")
+
         action_config = ActionConfig(command=command,
                                      detectors=detectors,
                                      trigger_detection=trigger_detection,
                                      trigger_no_detection=trigger_no_detection,
                                      save_frame=save_frame,
-                                     save_frame_dir=save_frame_dir)
+                                     save_frame_dir=save_frame_dir,
+                                     cool_down_time=cool_down_time)
         return action_config
 
     def start(self):

@@ -14,7 +14,8 @@ ActionConfig = namedtuple('ActionConfig',
                            'trigger_detection',
                            'trigger_no_detection',
                            'save_frame',
-                           'save_frame_dir'],
+                           'save_frame_dir',
+                           'cool_down_time'],
                           verbose=False)
 
 
@@ -29,11 +30,18 @@ class Action:
         self._trigger_no_detection = config.trigger_no_detection
         self._save_frame = config.save_frame
         self._save_frame_dir = config.save_frame_dir
+        self._cool_down_time = config.cool_down_time
+        self._last_detection_time = 0.0
 
     def invoke(self, detection, detector_name, frame):
 
         if ((self._trigger_detection and detection) or
             (self._trigger_no_detection and not detection)):
+            detection_time = time.time()
+            if (self._last_detection_time + self._cool_down_time) > detection_time:
+                self._logger.info("Action skipped due to cool-down")
+                return
+            self._last_detection_time  = detection_time
             for action_detector in self._detectors:
                 if action_detector == detector_name:
                     if self._save_frame:
@@ -59,7 +67,7 @@ class Action:
 
         # Setup environment variables that will be passed to the child
         # (action command)
-        ts_raw = time.time()
+        ts_raw = self._last_detection_time
         ts_date = datetime.datetime.fromtimestamp(ts_raw).strftime('%Y-%m-%d %H:%M:%S')
 
         os.environ["TIME_STAMP_RAW"] = str(ts_raw)
