@@ -5,6 +5,7 @@ import tempfile
 import os
 import datetime
 import time
+import logging
 
 
 ActionConfig = namedtuple('ActionConfig',
@@ -21,6 +22,7 @@ class Action:
 
     def __init__(self, config):
 
+        self._logger = logging.getLogger(__name__)
         self._command = config.command
         self._detectors = config.detectors
         self._trigger_detection = config.trigger_detection
