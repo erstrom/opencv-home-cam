@@ -173,6 +173,7 @@ Each action section will set the below options for the particular action:
 - detectors
 - triggers
 - save_frame
+- cool_down_time
 
 The *command* option is the path to the script that is going to be launched.
 
@@ -198,6 +199,13 @@ the launch of the action script into a temporary file. The path to the
 temporary file will be passed on to the action script with the **IMAGE_PATH**
 environment variable. The temporary file will be removed as soon as the
 action script terminates.
+
+The *cool_down_time* option will cause the action not to be invoked unless
+at least cool_down_time seconds have elapsed since the last invocation.
+Sometimes when objects are detected, there could be several transitions from
+detect to no-detect depending on detector and on how the object moves etc.
+It is often not desired to let the action trigger on all those transitions
+(there could be a lot of email spamming if the sendemail action is used).
 
 Actions are optional, and if no action is desired, no ``action%d`` section
 needs to be specified.
