@@ -221,8 +221,8 @@ variables. They are listed below:
 - **IMAGE_PATH**: The path to a jpg file containing the frame that caused
   the action to be invoked.
 
-If the action is associated with several cascades, the action script might
-be launch several time for each detector that has yielded an object detection.
+If the action is associated with several detectors, the action script might
+be launch several times for each detector that has yielded an object detection.
 In this case, the **DETECTOR** environment variable will of course be set to
 the name of the particular detector that is associated with the action invocation.
 
