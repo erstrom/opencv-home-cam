@@ -123,14 +123,21 @@ _________
 Detectors are used to detect objects in frames captured by a camera.
 Different detectors can be used to detect different types of objects.
 
-Currently, only two types of detectors are supported:
+Currently, three types of detectors are supported:
 
 - Haar cascade
 - HOG people detector (HOG = Histogram of Oriented Gradients)
+- Simple motion detector
 
 The HOG people detector is used to detect pedestrians only, whereas the
 Haar cascade detector can be used to detect different types of objects
 depending on which cascade file is used.
+
+The simple motion detector does not use any of the OpenCV built-in
+object recognition or object detection algorithms at all.
+It merely subtracts the captured frame from the previous and checks if
+the diff has changed significantly.
+If there is a significant change, it is considered to be motion.
 
 The detector type is selected with the ``detector_type`` option.
 

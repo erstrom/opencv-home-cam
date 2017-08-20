@@ -11,6 +11,7 @@ from .recorder import Recorder, RecorderConfig
 from .detector import Detector
 from .haar_cascade_detector import HaarCascadeDetector, HaarCascadeDetectorConfig
 from .hog_detector import HogPeopleDetector, HogPeopleDetectorConfig
+from .simple_motion_detector import SimpleMotionDetector, SimpleMotionDetectorConfig
 from .action import Action, ActionConfig
 
 
@@ -101,6 +102,9 @@ class OpenCvHomeCam:
             elif type(detector_cfg).__name__ == 'HogPeopleDetectorConfig':
                 detector = HogPeopleDetector(name=camera_detector,
                                              config=detector_cfg)
+            elif type(detector_cfg).__name__ == 'SimpleMotionDetectorConfig':
+                detector = SimpleMotionDetector(name=camera_detector,
+                                                config=detector_cfg)
             else:
                 raise OpenCvHomeCamException("Unknown detector type: {}".format(type(detector_cfg).__name__))
             detectors.append(detector)
@@ -292,6 +296,8 @@ class OpenCvHomeCam:
                 return self._read_haar_cascade_detector_config(detector_section)
             elif (detector_type.lower() == 'hog-people'):
                 return self._read_hog_people_detector_config(detector_section)
+            elif (detector_type.lower() == 'simple-motion'):
+                return self._read_simple_motion_detector_config(detector_section)
             else:
                 raise OpenCvHomeCamException("Config: invalid detector_type: {}!".format(detector_type))
         else:
@@ -369,6 +375,30 @@ class OpenCvHomeCam:
         detector_config = HogPeopleDetectorConfig(scale_factor=scale_factor,
                                                   win_stride=win_stride,
                                                   padding=padding)
+        return detector_config
+
+    def _read_simple_motion_detector_config(self, detector_section):
+
+        detection_cfg = self._cp[detector_section]
+
+        if 'diff_threshold' in detection_cfg:
+            diff_threshold = cast_string_to_float(detection_cfg['diff_threshold'])
+            if diff_threshold is None:
+                raise OpenCvHomeCamException("Config: bad diff_threshold value!")
+        else:
+            diff_threshold = 5.0
+            self._logger.info("Config: Missing scale_factor value, using default")
+
+        if 'blurring_size' in detection_cfg:
+            blurring_size = cast_string_to_int(detection_cfg['blurring_size'])
+            if blurring_size is None:
+                raise OpenCvHomeCamException("Config: bad blurring_size value!")
+        else:
+            blurring_size = 21
+            self._logger.info("Config: Missing scale_factor value, using default")
+
+        detector_config = SimpleMotionDetectorConfig(diff_threshold=diff_threshold,
+                                                     blurring_size=blurring_size)
         return detector_config
 
     def _read_action_config(self, action_section):
