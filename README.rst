@@ -60,7 +60,7 @@ creating small Linux-based embedded systems.
 Below is a fork of the mainline Buildroot git repository with a few extra
 OpenCV patches added:
 
-https://github.com/erstrom/opencv-home-cam
+https://github.com/erstrom/buildroot-opencv
 
 See *README.rst* for instructions on how to configure and build images.
 
