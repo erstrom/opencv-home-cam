@@ -37,9 +37,6 @@ class CamController:
         if camera is None:
             raise CamControllerException("Missing camera")
 
-        if recorder is None:
-            raise CamControllerException("Missing recorder")
-
         if detectors is None:
             raise CamControllerException("Missing detector(s)")
 
