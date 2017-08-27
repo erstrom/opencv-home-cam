@@ -5,11 +5,9 @@ from .detector import Detector, DetectorException
 
 SimpleMotionDetectorConfig = namedtuple('SimpleMotionDetectorConfig',
                                         ['diff_threshold',
-                                         'blurring_size'],
+                                         'blurring_size',
+                                         'object_min_area'],
                                         verbose=False)
-
-
-CONTOUR_MIN_AREA = 100
 
 
 # The simple motion detector detects objects by just subtracting the
@@ -35,6 +33,7 @@ class SimpleMotionDetector(Detector):
         self._prev_frame = None
         self._blurring_size = config.blurring_size
         self._diff_threshold = config.diff_threshold
+        self._object_min_area = config.object_min_area
 
     def detect(self, frame):
 
@@ -60,7 +59,7 @@ class SimpleMotionDetector(Detector):
         total_contour_area = 0
         for c in contours:
             cur_area = cv2.contourArea(c)
-            if cur_area < CONTOUR_MIN_AREA:
+            if cur_area < self._object_min_area:
                 continue
 
             total_contour_area += cur_area

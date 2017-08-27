@@ -397,8 +397,17 @@ class OpenCvHomeCam:
             blurring_size = 21
             self._logger.info("Config: Missing scale_factor value, using default")
 
+        if 'object_min_area' in detection_cfg:
+            object_min_area = cast_string_to_int(detection_cfg['object_min_area'])
+            if object_min_area is None:
+                raise OpenCvHomeCamException("Config: bad object_min_area value!")
+        else:
+            object_min_area = 100
+            self._logger.info("Config: Missing scale_factor value, using default")
+
         detector_config = SimpleMotionDetectorConfig(diff_threshold=diff_threshold,
-                                                     blurring_size=blurring_size)
+                                                     blurring_size=blurring_size,
+                                                     object_min_area=object_min_area)
         return detector_config
 
     def _read_action_config(self, action_section):
