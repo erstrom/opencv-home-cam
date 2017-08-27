@@ -48,6 +48,22 @@ Install opencv-home-cam with the *setup.py* script.
 Make sure Python 3 is used, since the program does not work well with
 Python 2.
 
+Raspberry Pi
+++++++++++++
+
+It is possible to run opencv-home-cam on a Raspberry Pi.
+
+A convenient way to create a minimalistic object detection system on a
+Raspberry Pi 3 is with Buildroot. Buildroot is a very nice tool for
+creating small Linux-based embedded systems.
+
+Below is a fork of the mainline Buildroot git repository with a few extra
+OpenCV patches added:
+
+https://github.com/erstrom/opencv-home-cam
+
+See *README.rst* for instructions on how to configure and build images.
+
 Basic operation
 ---------------
 
