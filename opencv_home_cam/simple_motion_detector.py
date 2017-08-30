@@ -6,7 +6,8 @@ from .detector import Detector, DetectorException
 SimpleMotionDetectorConfig = namedtuple('SimpleMotionDetectorConfig',
                                         ['diff_threshold',
                                          'blurring_size',
-                                         'object_min_area'],
+                                         'object_min_area',
+                                         'pixel_intensity_threshold'],
                                         verbose=False)
 
 
@@ -34,6 +35,7 @@ class SimpleMotionDetector(Detector):
         self._blurring_size = config.blurring_size
         self._diff_threshold = config.diff_threshold
         self._object_min_area = config.object_min_area
+        self._pixel_intensity_threshold = config.pixel_intensity_threshold
 
     def detect(self, frame):
 
@@ -48,7 +50,9 @@ class SimpleMotionDetector(Detector):
 
         # Do the actual diffing
         frame_delta = cv2.absdiff(self._prev_frame, frame)
-        thresh = cv2.threshold(frame_delta, 25, 255, cv2.THRESH_BINARY)[1]
+        thresh = cv2.threshold(frame_delta,
+                               self._pixel_intensity_threshold,
+                               255, cv2.THRESH_BINARY)[1]
 
         thresh = cv2.dilate(thresh, None, iterations=2)
         (im2, contours, _) = cv2.findContours(thresh.copy(),

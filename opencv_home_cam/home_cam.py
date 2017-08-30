@@ -405,9 +405,18 @@ class OpenCvHomeCam:
             object_min_area = 100
             self._logger.info("Config: Missing scale_factor value, using default")
 
+        if 'pixel_intensity_threshold' in detection_cfg:
+            pixel_intensity_threshold = cast_string_to_int(detection_cfg['pixel_intensity_threshold'])
+            if pixel_intensity_threshold is None:
+                raise OpenCvHomeCamException("Config: bad pixel_intensity_threshold value!")
+        else:
+            pixel_intensity_threshold = 25
+            self._logger.info("Config: Missing pixel intensity value, using default")
+
         detector_config = SimpleMotionDetectorConfig(diff_threshold=diff_threshold,
                                                      blurring_size=blurring_size,
-                                                     object_min_area=object_min_area)
+                                                     object_min_area=object_min_area,
+                                                     pixel_intensity_threshold=pixel_intensity_threshold)
         return detector_config
 
     def _read_action_config(self, action_section):
